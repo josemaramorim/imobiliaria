@@ -1,0 +1,5 @@
+{
+  "name": "Kendi Imoveis",
+  "description": "A high-performance, modular SaaS platform for real estate agencies, featuring multi-tenant architecture, advanced CRM with Kanban, property management, and API integrations.",
+  "requestFramePermissions": []
+}

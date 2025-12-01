@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global custom styles moved from index.html */
+@layer base {
+  body { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif; background-color: #f8fafc; }
+}
+
+/* Custom Scrollbar for Kanban */
+.kanban-scroll::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+.kanban-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.kanban-scroll::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 20px;
+}
+
+.toggle-checkbox:checked {
+  right: 0;
+  border-color: #4f46e5;
+}
+.toggle-checkbox:checked + .toggle-label {
+  background-color: #4f46e5;
+}

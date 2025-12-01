@@ -1,0 +1,319 @@
+// Prisma schema for Apollo Real Estate Cloud
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ENUMS
+enum UserRole {
+  ADMIN
+  MANAGER
+  BROKER
+}
+
+enum TenantStatus {
+  ACTIVE
+  INACTIVE
+  TRIAL
+  PAST_DUE
+}
+
+enum PropertyStatus {
+  AVAILABLE
+  UNDER_OFFER
+  SOLD
+  RENTED
+}
+
+enum OpportunityStage {
+  NEW
+  QUALIFIED
+  VISIT_SCHEDULED
+  PROPOSAL
+  NEGOTIATION
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+enum InteractionType {
+  CALL
+  EMAIL
+  MEETING
+  NOTE
+  WHATSAPP
+}
+
+enum BillingCycle {
+  MENSAL
+  ANUAL
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+
+enum CustomFieldType {
+  TEXT
+  NUMBER
+  SELECT
+  MULTI_SELECT
+  BOOLEAN
+}
+
+// GLOBAL (SAAS LEVEL)
+model GlobalSettings {
+  id              String   @id @default(cuid())
+  platformName    String   @default("Apollo Real Estate Cloud")
+  defaultCurrency String   @default("BRL")
+  maintenanceMode Boolean  @default(false)
+  allowSignups    Boolean  @default(true)
+  updatedAt       DateTime @updatedAt
+}
+
+model SubscriptionPlan {
+  id           String   @id @default(cuid())
+  name         String
+  price        Float
+  billingCycle BillingCycle
+  features     String[]
+  tenants      Tenant[]
+}
+
+model PaymentGateway {
+  id         String   @id // e.g. 'stripe', 'pagarme'
+  name       String
+  logo       String
+  themeColor String
+  status     String   // ACTIVE | INACTIVE
+  configFields Json
+  config     Json?
+  tenants    Tenant[]
+}
+
+// TENANT & RELATED
+model Tenant {
+  id                String            @id @default(cuid())
+  name              String
+  domain            String            @unique
+  themeColor        String            @default("#4f46e5")
+  logoUrl           String?
+  status            TenantStatus      @default(TRIAL)
+  createdAt         DateTime          @default(now())
+  trialEndsAt       DateTime?
+  nextBillingDate   DateTime?
+
+  planId            String
+  subscriptionPlan  SubscriptionPlan  @relation(fields: [planId], references: [id])
+
+  paymentGatewayId  String?
+  paymentGateway    PaymentGateway?   @relation(fields: [paymentGatewayId], references: [id])
+
+  // relations
+  users             User[]
+  properties        Property[]
+  customFieldConfigs CustomFieldConfig[]
+  interactions      Interaction[]
+  leads             Lead[]
+  invoices          Invoice[]
+  apiKeys           ApiKey[]
+  webhooks          Webhook[]
+  tags              Tag[]
+  opportunities     Opportunity[]
+  visits            Visit[]
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  phone        String?
+  role         UserRole  @default(BROKER)
+  avatarUrl    String?
+  status       String    @default("ACTIVE")
+  passwordHash String
+  tenantId     String?
+  tenant       Tenant?   @relation(fields: [tenantId], references: [id])
+  // properties where this user is the agent
+  assignedProperties Property[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // indexes
+  @@index([tenantId])
+}
+
+model Tag {
+  id       String @id @default(cuid())
+  label    String
+  color    String
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+
+  // relations
+  leads         Lead[]       @relation("LeadTags")
+  opportunities Opportunity[] @relation("OpportunityTags")
+
+  @@index([tenantId])
+}
+
+model CustomFieldConfig {
+  id       String @id @default(cuid())
+  key      String
+  label    String
+  type     CustomFieldType
+  // Prisma does not support optional list types (e.g. String[]?).
+  // Use a non-optional list with a default empty array so the field can be empty.
+  options  String[] @default([])
+  required Boolean @default(false)
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+}
+
+model Property {
+  id           String   @id @default(cuid())
+  title        String
+  address      String
+  price        Float
+  area         Float
+  bedrooms     Int
+  bathrooms    Int
+  status       PropertyStatus @default(AVAILABLE)
+  images       String[]
+  customValues Json
+  agentId      String?          // relation to User
+  agent        User?            @relation(fields:[agentId], references: [id])
+  tenantId     String
+  tenant       Tenant           @relation(fields: [tenantId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  opportunities Opportunity[]
+
+  @@index([tenantId])
+}
+
+model Lead {
+  id           String    @id @default(cuid())
+  name         String
+  email        String
+  phone        String
+  source       String
+  status       String?
+  isActive     Boolean
+  customValues Json
+  createdAt    DateTime  @default(now())
+  tenantId     String
+  tenant       Tenant    @relation(fields: [tenantId], references: [id])
+
+  interactions Interaction[]
+  tags         Tag[]     @relation("LeadTags")
+  opportunities Opportunity[]
+
+  @@index([tenantId])
+}
+
+model Interaction {
+  id        String          @id @default(cuid())
+  type      InteractionType
+  date      DateTime
+  notes     String
+  createdBy String          // user id
+  leadId    String?
+  lead      Lead?            @relation(fields: [leadId], references: [id])
+  opportunityId String?
+  tenantId  String
+  tenant    Tenant          @relation(fields: [tenantId], references: [id])
+  createdAt DateTime        @default(now())
+
+  @@index([tenantId])
+}
+
+model Opportunity {
+  id           String           @id @default(cuid())
+  leadId       String
+  lead         Lead             @relation(fields: [leadId], references: [id])
+  leadName     String
+  propertyId   String?
+  property     Property?        @relation(fields: [propertyId], references: [id])
+  value        Float
+  probability  Int
+  stage        OpportunityStage @default(NEW)
+  tags         Tag[]            @relation("OpportunityTags")
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  tenantId     String
+  tenant       Tenant           @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+}
+
+model Visit {
+  id               String  @id @default(cuid())
+  propertyId       String
+  propertyTitle    String
+  leadName         String
+  date             DateTime
+  brokerId         String
+  status           String
+  notes            String?
+  reminderEnabled  Boolean @default(false)
+  tenantId         String
+  tenant           Tenant  @relation(fields: [tenantId], references: [id])
+  createdAt        DateTime @default(now())
+
+  @@index([tenantId])
+}
+
+model ApiKey {
+  id       String   @id @default(cuid())
+  name     String
+  prefix   String
+  token    String
+  lastUsed DateTime?
+  createdAt DateTime @default(now())
+  scopes   String[]
+  status   String
+  tenantId String?
+  tenant   Tenant?  @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+}
+
+model Webhook {
+  id           String   @id @default(cuid())
+  name         String
+  url          String
+  events       String[]
+  status       String
+  secret       String
+  lastTriggered DateTime?
+  failedCount  Int      @default(0)
+  tenantId     String?
+  tenant       Tenant?  @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+}
+
+model Invoice {
+  id        String       @id @default(cuid())
+  tenantId  String
+  tenant    Tenant       @relation(fields: [tenantId], references: [id])
+  planName  String
+  amount    Float
+  issueDate DateTime
+  dueDate   DateTime
+  paidDate  DateTime?
+  status    InvoiceStatus @default(PENDING)
+  gatewayProvider String?   // ex: 'asaas'
+  gatewayExternalId String?
+  gatewayData Json?
+
+  @@index([tenantId])
+}

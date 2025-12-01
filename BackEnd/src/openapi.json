@@ -1,0 +1,904 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Apollo Real Estate Cloud - API",
+    "version": "0.1.0",
+    "description": "API REST para o painel SaaS Apollo — endpoints de autenticação, tenant, propriedades, CRM e faturamento. Este YAML inclui exemplos para requests/responses usados no frontend."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:4000",
+      "description": "Local development"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "AuthLogin": {
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string"
+          }
+        },
+        "example": {
+          "email": "admin@apollo.example",
+          "password": "password"
+        }
+      },
+      "TokenResponse": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          }
+        },
+        "example": {
+          "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+          "user": {
+            "id": "usr_abc123",
+            "name": "Super Admin",
+            "email": "admin@apollo.example",
+            "role": "ADMIN"
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "role": {
+            "type": "string"
+          }
+        }
+      },
+      "Tenant": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "themeColor": {
+            "type": "string"
+          },
+          "logoUrl": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "planId": {
+            "type": "string"
+          }
+        },
+        "example": {
+          "id": "tnt_001",
+          "name": "Imobiliaria Exemplo",
+          "domain": "exemplo",
+          "themeColor": "#4f46e5",
+          "status": "ACTIVE",
+          "planId": "plan_02"
+        }
+      },
+      "SubscriptionPlan": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number"
+          },
+          "billingCycle": {
+            "type": "string"
+          }
+        },
+        "example": {
+          "id": "plan_02",
+          "name": "Pro",
+          "price": 99,
+          "billingCycle": "MENSAL"
+        }
+      },
+      "Property": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number"
+          },
+          "area": {
+            "type": "number"
+          },
+          "bedrooms": {
+            "type": "integer"
+          },
+          "bathrooms": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string"
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "tenantId": {
+            "type": "string"
+          }
+        },
+        "example": {
+          "title": "Apartamento espaçoso no Brooklin",
+          "address": "Rua Exemplo, 123 - Brooklin, SP",
+          "price": 750000,
+          "area": 120,
+          "bedrooms": 3,
+          "bathrooms": 2,
+          "status": "AVAILABLE",
+          "images": [
+            "https://picsum.photos/seed/1/800/600",
+            "https://picsum.photos/seed/2/800/600"
+          ]
+        }
+      },
+      "Lead": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "tenantId": {
+            "type": "string"
+          }
+        },
+        "example": {
+          "name": "Ana Pereira",
+          "email": "ana+lead@example.com",
+          "phone": "11999990000",
+          "source": "website",
+          "isActive": true
+        }
+      },
+      "Opportunity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "leadId": {
+            "type": "string"
+          },
+          "leadName": {
+            "type": "string"
+          },
+          "propertyId": {
+            "type": "string"
+          },
+          "value": {
+            "type": "number"
+          },
+          "probability": {
+            "type": "number"
+          },
+          "stage": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          }
+        },
+        "example": {
+          "leadId": "lead_123",
+          "leadName": "Ana Pereira",
+          "propertyId": "prop_456",
+          "propertyTitle": "Apartamento espaçoso no Brooklin",
+          "value": 650000,
+          "probability": 60,
+          "stage": "QUALIFIED",
+          "tenantId": "tnt_001"
+        }
+      },
+      "Interaction": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          }
+        },
+        "example": {
+          "type": "CALL",
+          "date": "2025-11-28T15:00:00Z",
+          "notes": "Cliente interessado, pediu visita",
+          "createdBy": "usr_999",
+          "tenantId": "tnt_001"
+        }
+      },
+      "Visit": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "propertyId": {
+            "type": "string"
+          },
+          "propertyTitle": {
+            "type": "string"
+          },
+          "leadName": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "brokerId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          }
+        },
+        "example": {
+          "propertyId": "prop_456",
+          "propertyTitle": "Apartamento espaçoso no Brooklin",
+          "leadName": "Ana Pereira",
+          "date": "2025-12-01T10:00:00Z",
+          "brokerId": "usr_321",
+          "status": "PENDING",
+          "notes": "Trazer contrato",
+          "tenantId": "tnt_001"
+        }
+      },
+      "Invoice": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "planName": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number"
+          },
+          "issueDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "paidDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "example": {
+          "tenantId": "tnt_001",
+          "planName": "Pro",
+          "amount": 99,
+          "issueDate": "2025-11-01T00:00:00Z",
+          "dueDate": "2025-11-10T00:00:00Z",
+          "status": "PENDING"
+        }
+      },
+      "ApiKey": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "prefix": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          }
+        },
+        "example": {
+          "name": "Integração ERP",
+          "scopes": [
+            "webhooks",
+            "leads:read",
+            "properties:read"
+          ],
+          "status": "ACTIVE",
+          "tenantId": "tnt_001"
+        }
+      },
+      "Webhook": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          }
+        },
+        "example": {
+          "name": "Notifier - Leads",
+          "url": "https://hooks.example.com/notify",
+          "events": [
+            "lead.created",
+            "opportunity.updated"
+          ],
+          "status": "ACTIVE",
+          "tenantId": "tnt_001"
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health check",
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "Login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthLogin"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "token + user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "invalid credentials"
+          }
+        }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "summary": "Register a new top-level user (bootstrap)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "created"
+          }
+        }
+      }
+    },
+    "/users/me": {
+      "get": {
+        "summary": "Current authenticated user",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "user info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tenants": {
+      "get": {
+        "summary": "List tenants (admin)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "list"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create tenant (admin)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Tenant"
+              },
+              "example": {
+                "name": "Nova Imobiliaria",
+                "domain": "nova",
+                "planId": "plan_02"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "created"
+          }
+        }
+      }
+    },
+    "/properties": {
+      "get": {
+        "summary": "List properties (tenant-scoped)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tenantId",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "list"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create property",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Property"
+              },
+              "example": {
+                "title": "Loft moderno - Vila Madalena",
+                "address": "R. das Flores, 100",
+                "price": 420000,
+                "area": 70,
+                "bedrooms": 2,
+                "bathrooms": 1
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "created"
+          }
+        }
+      }
+    },
+    "/leads": {
+      "get": {
+        "summary": "List leads for a tenant",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "list"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create lead",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Lead"
+              },
+              "example": {
+                "name": "Luiza Andrade",
+                "email": "luiza@example.com",
+                "phone": "21988887777",
+                "source": "facebook"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "created"
+          }
+        }
+      }
+    },
+    "/opportunities": {
+      "post": {
+        "summary": "Create opportunity",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Opportunity"
+              },
+              "example": {
+                "leadId": "lead_123",
+                "leadName": "Luiza Andrade",
+                "value": 480000,
+                "probability": 30,
+                "stage": "NEW"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "created"
+          }
+        }
+      }
+    },
+    "/interactions": {
+      "post": {
+        "summary": "Create interaction",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interaction"
+              },
+              "example": {
+                "type": "EMAIL",
+                "date": "2025-11-28T14:10:00Z",
+                "notes": "Enviado e-mail com proposta",
+                "createdBy": "usr_321"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "created"
+          }
+        }
+      }
+    },
+    "/visits": {
+      "post": {
+        "summary": "Schedule a visit",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Visit"
+              },
+              "example": {
+                "propertyId": "prop_456",
+                "propertyTitle": "Apartamento espaçoso no Brooklin",
+                "leadName": "Ana Pereira",
+                "date": "2025-12-01T10:00:00Z",
+                "brokerId": "usr_321"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "created"
+          }
+        }
+      }
+    },
+    "/invoices": {
+      "post": {
+        "summary": "Create invoice",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Invoice"
+              },
+              "example": {
+                "tenantId": "tnt_001",
+                "planName": "Pro",
+                "amount": 99,
+                "issueDate": "2025-11-01T00:00:00Z",
+                "dueDate": "2025-11-10T00:00:00Z"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "created"
+          }
+        }
+      }
+    },
+    "/invoices/{id}/mark-paid": {
+      "post": {
+        "summary": "Mark invoice as paid",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "updated"
+          }
+        }
+      }
+    },
+    "/apikeys": {
+      "post": {
+        "summary": "Create API key",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiKey"
+              },
+              "example": {
+                "name": "Integração ERP",
+                "scopes": [
+                  "webhooks",
+                  "leads:read"
+                ],
+                "status": "ACTIVE"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "created"
+          }
+        }
+      }
+    },
+    "/apikeys/{id}/revoke": {
+      "post": {
+        "summary": "Revoke API key",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "revoked"
+          }
+        }
+      }
+    },
+    "/webhooks": {
+      "post": {
+        "summary": "Create webhook",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Webhook"
+              },
+              "example": {
+                "name": "Notifier - Leads",
+                "url": "https://hooks.example.com/notify",
+                "events": [
+                  "lead.created",
+                  "opportunity.updated"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "created"
+          }
+        }
+      }
+    },
+    "/webhooks/{id}": {
+      "delete": {
+        "summary": "Delete webhook",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "deleted"
+          }
+        }
+      }
+    }
+  }
+}

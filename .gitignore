@@ -1,0 +1,39 @@
+# Root-level .gitignore for the imobiliaria repository
+
+# Node and package managers
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build outputs
+dist/
+build/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Environment files
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor configs
+.vscode/
+.idea/
+
+# Coverage
+coverage/
+
+# Misc
+.cache/
+.parcel-cache/
+/.pnp/
+.pnp.js
