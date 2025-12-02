@@ -13,32 +13,46 @@ async function main() {
     prisma.subscriptionPlan.deleteMany(),
     prisma.paymentGateway.deleteMany(),
     prisma.globalSettings.deleteMany()
-  ]).catch(() => {});
+  ]).catch(() => { });
 
   console.log('✨ Criando configurações globais...');
   await prisma.globalSettings.create({ data: { platformName: 'Apollo Real Estate Cloud', defaultCurrency: 'BRL', maintenanceMode: false, allowSignups: true } });
 
   console.log('✨ Criando gateways de pagamento...');
-  await prisma.paymentGateway.createMany({ data: [
-    { id: 'stripe', name: 'Stripe', logo: '', themeColor: '#6772E5', status: 'ACTIVE', configFields: JSON.stringify([{ key: 'apiKey', label: 'API Key' }]) },
-    { id: 'pagarme', name: 'Pagar.me', logo: '', themeColor: '#1E3A8A', status: 'INACTIVE', configFields: JSON.stringify([{ key: 'token', label: 'Token' }]) }
-  ] });
+  await prisma.paymentGateway.createMany({
+    data: [
+      { id: 'stripe', name: 'Stripe', logo: '', themeColor: '#6772E5', status: 'ACTIVE', configFields: JSON.stringify([{ key: 'apiKey', label: 'API Key' }]) },
+      { id: 'pagarme', name: 'Pagar.me', logo: '', themeColor: '#1E3A8A', status: 'INACTIVE', configFields: JSON.stringify([{ key: 'token', label: 'Token' }]) }
+    ]
+  });
 
   console.log('✨ Criando planos de assinatura...');
   const basic = await prisma.subscriptionPlan.create({ data: { name: 'Basic', price: 29.0, billingCycle: 'MENSAL', features: ['5 propriedades', '1 usuário'] } });
   const pro = await prisma.subscriptionPlan.create({ data: { name: 'Pro', price: 99.0, billingCycle: 'MENSAL', features: ['Propriedades ilimitadas', 'Equipe completa', 'Suporte 24/7'] } });
 
   console.log('🔐 Criando usuário super-admin...');
-  const hash = await bcrypt.hash('password', 10);
-  const admin = await prisma.user.create({ data: { name: 'Super Admin', email: 'admin@apollo.example', passwordHash: hash, role: 'ADMIN' } });
+  const hash = await bcrypt.hash('admin', 10); // Senha 'admin' conforme FrontEnd
+  const admin = await prisma.user.create({ data: { name: 'Super Admin', email: 'admin@saas.com', passwordHash: hash, role: 'ADMIN', avatarUrl: 'https://ui-avatars.com/api/?name=SA&background=000&color=fff' } });
 
   console.log('🏢 Criando um tenant de exemplo...');
-  const tenant = await prisma.tenant.create({ data: {
-    name: 'Imobiliaria Exemplo', domain: 'exemplo', themeColor: '#4f46e5', planId: pro.id, paymentGatewayId: 'stripe', status: 'ACTIVE'
-  }});
+  const tenant = await prisma.tenant.create({
+    data: {
+      name: 'Imobiliaria Exemplo', domain: 'exemplo', themeColor: '#4f46e5', planId: pro.id, paymentGatewayId: 'stripe', status: 'ACTIVE'
+    }
+  });
 
   console.log('🔑 Criando usuário do tenant (manager)...');
-  await prisma.user.create({ data: { name: 'Tenant Manager', email: 'manager@exemplo', passwordHash: hash, role: 'MANAGER', tenantId: tenant.id } });
+  const userHash = await bcrypt.hash('123456', 10); // Senha '123456' conforme FrontEnd
+  await prisma.user.create({
+    data: {
+      name: 'Alex Rivera',
+      email: 'alex.r@apollo.app',
+      passwordHash: userHash,
+      role: 'ADMIN',
+      tenantId: tenant.id,
+      avatarUrl: 'https://picsum.photos/id/64/200/200'
+    }
+  });
 
   console.log('✅ Seed finalizado.');
 }

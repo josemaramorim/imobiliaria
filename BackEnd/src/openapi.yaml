@@ -339,6 +339,30 @@ paths:
               bedrooms: 2
               bathrooms: 1
       responses: { '201': { description: created } }
+  /properties/{id}:
+    put:
+      summary: Update property
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Property'
+      responses: { '200': { description: updated } }
+    delete:
+      summary: Delete property
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses: { '200': { description: deleted } }
   /leads:
     get:
       summary: List leads for a tenant
@@ -358,6 +382,30 @@ paths:
               phone: '21988887777'
               source: facebook
       responses: { '201': { description: created } }
+  /leads/{id}:
+    put:
+      summary: Update lead
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Lead'
+      responses: { '200': { description: updated } }
+    delete:
+      summary: Delete lead
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses: { '200': { description: deleted } }
   /opportunities:
     post:
       summary: Create opportunity
