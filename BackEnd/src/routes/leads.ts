@@ -3,6 +3,7 @@ import prisma from '../prisma';
 import { leadSchema } from '../validators/schemas';
 import { requireAuth } from '../middleware/auth';
 import { identifyTenant, requireTenant } from '../middleware/tenant';
+import { requireOwnership } from '../middleware/ownership';
 
 const router = Router();
 
@@ -34,7 +35,7 @@ router.post('/', requireAuth, identifyTenant, requireTenant, async (req: any, re
   }
 });
 
-router.put('/:id', requireAuth, identifyTenant, requireTenant, async (req: any, res: any) => {
+router.put('/:id', requireAuth, identifyTenant, requireTenant, requireOwnership('lead'), async (req: any, res: any) => {
   const id = req.params.id;
   const partial = req.body;
   try {
@@ -46,7 +47,7 @@ router.put('/:id', requireAuth, identifyTenant, requireTenant, async (req: any, 
   }
 });
 
-router.delete('/:id', requireAuth, async (req, res) => {
+router.delete('/:id', requireAuth, identifyTenant, requireTenant, requireOwnership('lead'), async (req, res) => {
   const id = req.params.id;
   try {
     await prisma.lead.delete({ where: { id } });

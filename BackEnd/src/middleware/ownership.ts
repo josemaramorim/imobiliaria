@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../prisma';
 
-export const requireOwnership = (model: 'property' | 'lead' | 'opportunity' | 'visit') => {
+export const requireOwnership = (model: 'property' | 'lead' | 'opportunity' | 'visit' | 'interaction' | 'invoice' | 'apiKey' | 'webhook') => {
     return async (req: any, res: Response, next: NextFunction) => {
         const id = req.params.id;
         const tenantId = res.locals.tenantId;

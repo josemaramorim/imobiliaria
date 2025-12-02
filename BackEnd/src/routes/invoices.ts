@@ -3,6 +3,7 @@ import prisma from '../prisma';
 import { invoiceSchema } from '../validators/schemas';
 import { requireAuth } from '../middleware/auth';
 import { identifyTenant, requireTenant } from '../middleware/tenant';
+import { requireOwnership } from '../middleware/ownership';
 import { t } from '../i18n';
 
 const router = Router();
@@ -25,7 +26,7 @@ router.post('/', requireAuth, identifyTenant, requireTenant, async (req: any, re
   }
 });
 
-router.post('/:id/mark-paid', requireAuth, async (req: Request, res: Response) => {
+router.post('/:id/mark-paid', requireAuth, identifyTenant, requireTenant, requireOwnership('invoice'), async (req: Request, res: Response) => {
   const id = req.params.id;
   try {
     const inv = await prisma.invoice.update({ where: { id }, data: { status: 'PAID', paidDate: new Date() } });

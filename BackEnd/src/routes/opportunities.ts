@@ -3,6 +3,7 @@ import prisma from '../prisma';
 import { opportunitySchema } from '../validators/schemas';
 import { requireAuth } from '../middleware/auth';
 import { identifyTenant, requireTenant } from '../middleware/tenant';
+import { requireOwnership } from '../middleware/ownership';
 import { t } from '../i18n';
 
 const router = Router();
@@ -40,7 +41,7 @@ router.post('/', requireAuth, identifyTenant, requireTenant, async (req: any, re
   }
 });
 
-router.put('/:id', requireAuth, async (req: Request, res: Response) => {
+router.put('/:id', requireAuth, identifyTenant, requireTenant, requireOwnership('opportunity'), async (req: Request, res: Response) => {
   const id = req.params.id;
   try {
     const opp = await prisma.opportunity.update({ where: { id }, data: req.body });
@@ -51,7 +52,7 @@ router.put('/:id', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
+router.delete('/:id', requireAuth, identifyTenant, requireTenant, requireOwnership('opportunity'), async (req: Request, res: Response) => {
   const id = req.params.id;
   try {
     await prisma.opportunity.delete({ where: { id } });

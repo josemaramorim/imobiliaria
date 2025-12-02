@@ -3,6 +3,7 @@ import prisma from '../prisma';
 import { apiKeySchema } from '../validators/schemas';
 import { requireAuth } from '../middleware/auth';
 import { identifyTenant, requireTenant } from '../middleware/tenant';
+import { requireOwnership } from '../middleware/ownership';
 import { t } from '../i18n';
 
 const router = Router();
@@ -32,7 +33,7 @@ router.post('/', requireAuth, identifyTenant, requireTenant, async (req: any, re
   }
 });
 
-router.post('/:id/revoke', requireAuth, async (req: Request, res: Response) => {
+router.post('/:id/revoke', requireAuth, identifyTenant, requireTenant, requireOwnership('apiKey'), async (req: Request, res: Response) => {
   const id = req.params.id;
   try {
     await prisma.apiKey.update({ where: { id }, data: { status: 'INACTIVE' } });
