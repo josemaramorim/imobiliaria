@@ -5,7 +5,11 @@ export interface AuthenticatedRequest extends Request {
   user?: { sub: string; role?: string };
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev';
+// Validação obrigatória do JWT_SECRET
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('ERRO CRÍTICO: JWT_SECRET deve ser definido nas variáveis de ambiente (.env)');
+}
 
 export function requireAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const authHeader = req.headers['authorization'] || '';
