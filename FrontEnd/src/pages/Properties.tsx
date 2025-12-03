@@ -204,9 +204,9 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, onEdit, onDelete,
             </div>
 
             <div className="p-5 flex-1 flex flex-col">
-                <div className="flex justify-between items-start mb-2">
+                <div className="flex justify-between items-start mb-2 gap-4">
                     <h3 className="text-lg font-semibold text-gray-900 leading-tight group-hover:text-indigo-600 transition-colors line-clamp-1">{property.title}</h3>
-                    <p className="text-lg font-bold text-indigo-600">
+                    <p className="text-lg font-bold text-indigo-600 flex-shrink-0">
                         {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(property.price)}
                     </p>
                 </div>
@@ -307,10 +307,10 @@ const PropertyFormModal: React.FC<PropertyFormModalProps> = ({ isOpen, onClose, 
         }));
     };
 
-    const isFormValid = formData.title && formData.title.trim().length > 0 && 
-                        formData.address && formData.address.trim().length > 0 &&
-                        formData.price !== undefined && formData.price >= 0 &&
-                        formData.area !== undefined && formData.area >= 0;
+    const isFormValid = formData.title && formData.title.trim().length > 0 &&
+        formData.address && formData.address.trim().length > 0 &&
+        formData.price !== undefined && formData.price >= 0 &&
+        formData.area !== undefined && formData.area >= 0;
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -545,8 +545,8 @@ const PropertyFormModal: React.FC<PropertyFormModalProps> = ({ isOpen, onClose, 
                         <button type="button" onClick={onClose} className="px-5 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-white transition-colors">
                             {t('common.cancel')}
                         </button>
-                        <button 
-                            type="submit" 
+                        <button
+                            type="submit"
                             disabled={!isFormValid}
                             className="px-5 py-2.5 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >

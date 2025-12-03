@@ -280,7 +280,11 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
       try {
         const { api } = await import('../services/api');
         const created = await api.createProperty(prop);
-        setProperties(prev => prev.map(item => item.id === prop.id ? created : item));
+        // Refresh the entire list from backend to ensure it appears
+        const allProps = await api.listProperties();
+        if (Array.isArray(allProps)) {
+          setProperties(allProps as any);
+        }
       } catch (err) {
         console.error('Failed to create property remote:', err);
       }
