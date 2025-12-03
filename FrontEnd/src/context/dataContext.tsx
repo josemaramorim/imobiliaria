@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Visit, Lead, Tag, Tenant, Property, Opportunity, User, CustomFieldConfig, ApiKey, Webhook, GlobalSettings, SubscriptionPlan, Invoice, PaymentGateway, PaymentGatewayId } from '../types/types';
 import { MOCK_TENANTS, MOCK_TEAM, MOCK_CUSTOM_FIELDS, MOCK_LEAD_CUSTOM_FIELDS, MOCK_PLANS, MOCK_INVOICES, MOCK_PAYMENT_GATEWAYS } from '../utils/constants';
+import { usePermission } from './auth';
 
 interface DataContextType {
   // SaaS Management
@@ -95,6 +96,7 @@ const useSessionStorage = <T,>(key: string, initialValue: T): [T, React.Dispatch
 };
 
 export const DataProvider = ({ children }: { children?: ReactNode }) => {
+  const { user } = usePermission();
   // Global States (Not Tenant-Scoped)
   const [tenants, setTenants] = useSessionStorage<Tenant[]>('apollo_tenants', MOCK_TENANTS);
   const [plans, setPlans] = useSessionStorage<SubscriptionPlan[]>('apollo_plans', MOCK_PLANS);
@@ -106,6 +108,12 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
   const [globalSettings, setGlobalSettings] = useSessionStorage<GlobalSettings>('apollo_global_settings', {
     platformName: 'Apollo SaaS', defaultCurrency: 'BRL', maintenanceMode: false, allowSignups: true
   });
+  // Sync activeTenantId with logged user
+  useEffect(() => {
+    if (user && user.tenantId && user.tenantId !== activeTenantId) {
+      setActiveTenantId(user.tenantId);
+    }
+  }, [user, activeTenantId, setActiveTenantId]);
 
   const currentTenant = tenants.find(t => t.id === activeTenantId) || tenants[0];
   const token = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
