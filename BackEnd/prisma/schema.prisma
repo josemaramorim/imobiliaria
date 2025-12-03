@@ -186,7 +186,7 @@ model Property {
   bathrooms    Int
   status       PropertyStatus @default(AVAILABLE)
   images       String[]
-  customValues Json
+  customValues Json     @default("{}")
   agentId      String?          // relation to User
   agent        User?            @relation(fields:[agentId], references: [id])
   tenantId     String
@@ -204,10 +204,10 @@ model Lead {
   name         String
   email        String
   phone        String
-  source       String
-  status       String?
-  isActive     Boolean
-  customValues Json
+  source       String    @default("")
+  status       String    @default("Novo")
+  isActive     Boolean   @default(true)
+  customValues Json      @default("{}")
   createdAt    DateTime  @default(now())
   tenantId     String
   tenant       Tenant    @relation(fields: [tenantId], references: [id])

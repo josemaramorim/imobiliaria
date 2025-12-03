@@ -15,14 +15,14 @@ export const tenantUpdateSchema = z.object({
   domain: z.string().min(2).optional(),
   themeColor: z.string().optional(),
   logoUrl: z.string().optional(),
-  status: z.enum(['ACTIVE','INACTIVE','TRIAL','PAST_DUE']).optional(),
+  status: z.enum(['ACTIVE', 'INACTIVE', 'TRIAL', 'PAST_DUE']).optional(),
   nextBillingDate: z.string().optional(),
 });
 
 export const planSchema = z.object({
   name: z.string().min(1),
   price: z.number().nonnegative(),
-  billingCycle: z.enum(['MENSAL','ANUAL']),
+  billingCycle: z.enum(['MENSAL', 'ANUAL']),
   features: z.array(z.string()).optional(),
 });
 
@@ -33,11 +33,11 @@ export const propertySchema = z.object({
   area: z.number().nonnegative(),
   bedrooms: z.number().int().nonnegative(),
   bathrooms: z.number().int().nonnegative(),
-  status: z.enum(['AVAILABLE','UNDER_OFFER','SOLD','RENTED']).optional(),
+  status: z.enum(['AVAILABLE', 'UNDER_OFFER', 'SOLD', 'RENTED']).optional(),
   images: z.array(z.string()).optional(),
   customValues: z.any().optional(),
   agentId: z.string().optional(),
-  tenantId: z.string().min(1),
+  tenantId: z.string().min(1).optional(),
 });
 
 export const leadSchema = z.object({
@@ -49,7 +49,7 @@ export const leadSchema = z.object({
   isActive: z.boolean().optional(),
   tags: z.array(z.object({ id: z.string().optional(), label: z.string(), color: z.string() })).optional(),
   customValues: z.any().optional(),
-  tenantId: z.string().min(1),
+  tenantId: z.string().min(1).optional(), // opcional pois é adicionado pelo backend
 });
 
 export const opportunitySchema = z.object({
@@ -59,13 +59,13 @@ export const opportunitySchema = z.object({
   propertyTitle: z.string().optional(),
   value: z.number().nonnegative(),
   probability: z.number().min(0).max(100),
-  stage: z.enum(['NEW','QUALIFIED','VISIT_SCHEDULED','PROPOSAL','NEGOTIATION','CLOSED_WON','CLOSED_LOST']).optional(),
+  stage: z.enum(['NEW', 'QUALIFIED', 'VISIT_SCHEDULED', 'PROPOSAL', 'NEGOTIATION', 'CLOSED_WON', 'CLOSED_LOST']).optional(),
   tags: z.array(z.object({ id: z.string().optional(), label: z.string(), color: z.string() })).optional(),
   tenantId: z.string().min(1),
 });
 
 export const interactionSchema = z.object({
-  type: z.enum(['CALL','EMAIL','MEETING','NOTE','WHATSAPP']),
+  type: z.enum(['CALL', 'EMAIL', 'MEETING', 'NOTE', 'WHATSAPP']),
   date: z.string().refine((s) => !Number.isNaN(Date.parse(s)), { message: 'invalid_date' }),
   notes: z.string().optional(),
   createdBy: z.string().min(1),
@@ -80,7 +80,7 @@ export const visitSchema = z.object({
   leadName: z.string().min(1),
   date: z.string().refine((s) => !Number.isNaN(Date.parse(s)), { message: 'invalid_date' }),
   brokerId: z.string().min(1),
-  status: z.enum(['PENDING','CONFIRMED','COMPLETED','CANCELLED']).optional(),
+  status: z.enum(['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED']).optional(),
   notes: z.string().optional(),
   reminderEnabled: z.boolean().optional(),
   tenantId: z.string().min(1),
@@ -93,13 +93,13 @@ export const invoiceSchema = z.object({
   issueDate: z.string().refine((s) => !Number.isNaN(Date.parse(s)), { message: 'invalid_date' }),
   dueDate: z.string().refine((s) => !Number.isNaN(Date.parse(s)), { message: 'invalid_date' }),
   paidDate: z.string().optional(),
-  status: z.enum(['PENDING','PAID','OVERDUE']).optional(),
+  status: z.enum(['PENDING', 'PAID', 'OVERDUE']).optional(),
 });
 
 export const apiKeySchema = z.object({
   name: z.string().min(1),
   scopes: z.array(z.string()).optional(),
-  status: z.enum(['ACTIVE','INACTIVE']).optional(),
+  status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
   tenantId: z.string().min(1).optional(),
 });
 
@@ -107,6 +107,6 @@ export const webhookSchema = z.object({
   name: z.string().min(1),
   url: z.string().url(),
   events: z.array(z.string()).min(1),
-  status: z.enum(['ACTIVE','INACTIVE']).optional(),
+  status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
   tenantId: z.string().min(1).optional(),
 });

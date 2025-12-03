@@ -1,3 +1,6 @@
+import dotenv from 'dotenv';
+dotenv.config(); // Carregar .env ANTES de qualquer outra importação
+
 import { createServer } from './server';
 
 const port = process.env.PORT || 4000;

@@ -27,8 +27,8 @@ export const api = {
   },
 
   // Properties
-  listProperties: async (tenantId?: string) => {
-    const resp = await client.get('/properties', { params: tenantId ? { tenantId } : {} });
+  listProperties: async () => {
+    const resp = await client.get('/properties');
     return resp.data.properties || [];
   },
   createProperty: async (payload: any) => {
@@ -45,8 +45,8 @@ export const api = {
   },
 
   // Leads
-  listLeads: async (tenantId?: string) => {
-    const resp = await client.get('/leads', { params: tenantId ? { tenantId } : {} });
+  listLeads: async () => {
+    const resp = await client.get('/leads');
     return resp.data.leads || [];
   },
   createLead: async (payload: any) => {

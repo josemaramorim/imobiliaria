@@ -9,7 +9,11 @@ const router = Router();
 
 router.get('/', requireAuth, identifyTenant, requireTenant, async (req: any, res: any) => {
   const tenantId = res.locals.tenantId;
-  const leads = await prisma.lead.findMany({ where: { tenantId } });
+  const leads = await prisma.lead.findMany({
+    where: { tenantId },
+    include: { tags: true },
+    orderBy: { createdAt: 'desc' }
+  });
   return res.json({ leads });
 });
 

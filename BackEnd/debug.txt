@@ -1,0 +1,13 @@
+[2025-12-03T01:28:54.795Z] 🔍 [Middleware] requireTenant - ID recebido: undefined
+[2025-12-03T01:28:54.900Z] ❌ [Middleware] Tenant não encontrado no banco para ID: undefined
+[2025-12-03T01:28:55.011Z] 📋 [Middleware] Tenants disponíveis: cminq26pp0005d3w9cpl83h2s
+[2025-12-03T01:30:38.815Z] 🔍 [Middleware] identifyTenant - Headers: {"host":"localhost:4000","connection":"keep-alive","content-type":"application/json","authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbWlucTI2dW4wMDA3ZDN3OWZkOTM1NG41Iiwicm9sZSI6IkFETUlOIiwidGVuYW50SWQiOiJjbWlucTI2cHAwMDA1ZDN3OWNwbDgzaDJzIiwiaWF0IjoxNzY0NzI1NDM4LCJleHAiOjE3NjQ3NTQyMzh9.hpuzsH0eNx-G_FdNnRjBdOXFo-dqsCWEFv50uo_I118","x-tenant-id":"undefined","accept":"*/*","accept-language":"*","sec-fetch-mode":"cors","user-agent":"node","accept-encoding":"gzip, deflate","content-length":"130"}
+[2025-12-03T01:30:38.816Z] 🔍 [Middleware] identifyTenant - Header: undefined, Query: undefined, Body: undefined
+[2025-12-03T01:30:38.818Z] ✅ [Middleware] identifyTenant - Definido res.locals.tenantId: undefined
+[2025-12-03T01:30:38.820Z] 🔍 [Middleware] requireTenant - ID recebido: undefined
+[2025-12-03T01:30:38.926Z] ❌ [Middleware] Tenant não encontrado no banco para ID: undefined
+[2025-12-03T01:30:39.026Z] 📋 [Middleware] Tenants disponíveis: cminq26pp0005d3w9cpl83h2s
+[2025-12-03T01:32:40.735Z] 🔍 [Middleware] identifyTenant - Headers: {"host":"localhost:4000","connection":"keep-alive","content-type":"application/json","authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbWlucTI2dW4wMDA3ZDN3OWZkOTM1NG41Iiwicm9sZSI6IkFETUlOIiwidGVuYW50SWQiOiJjbWlucTI2cHAwMDA1ZDN3OWNwbDgzaDJzIiwiaWF0IjoxNzY0NzI1NTYwLCJleHAiOjE3NjQ3NTQzNjB9.BEVT9nNATKykvHXoonZsQFCLaiCQiaNFoC5jLrPQh5g","x-tenant-id":"cminq26pp0005d3w9cpl83h2s","accept":"*/*","accept-language":"*","sec-fetch-mode":"cors","user-agent":"node","accept-encoding":"gzip, deflate","content-length":"130"}
+[2025-12-03T01:32:40.736Z] 🔍 [Middleware] identifyTenant - Header: cminq26pp0005d3w9cpl83h2s, Query: undefined, Body: undefined
+[2025-12-03T01:32:40.738Z] ✅ [Middleware] identifyTenant - Definido res.locals.tenantId: cminq26pp0005d3w9cpl83h2s
+[2025-12-03T01:32:40.739Z] 🔍 [Middleware] requireTenant - ID recebido: cminq26pp0005d3w9cpl83h2s

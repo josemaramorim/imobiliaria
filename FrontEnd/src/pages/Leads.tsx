@@ -301,7 +301,7 @@ const LeadDetailsSidebar: React.FC<LeadDetailsSidebarProps> = ({ isOpen, onClose
                                 Tags
                             </h4>
                             <div className="flex flex-wrap gap-2">
-                                {lead.tags.map(tag => (
+                                {lead.tags && lead.tags.length > 0 ? lead.tags.map(tag => (
                                     <span
                                         key={tag.id}
                                         className="text-xs px-2 py-1 rounded-md border font-medium"
@@ -313,7 +313,7 @@ const LeadDetailsSidebar: React.FC<LeadDetailsSidebarProps> = ({ isOpen, onClose
                                     >
                                         {tag.label}
                                     </span>
-                                ))}
+                                )) : null}
                             </div>
                         </div>
                     )}
@@ -1438,7 +1438,7 @@ const Leads = () => {
                                     <td className="px-6 py-4 text-sm text-gray-600">{lead.source}</td>
                                     <td className="px-6 py-4">
                                         <div className="flex flex-wrap gap-1">
-                                            {lead.tags.map(tag => (
+                                            {lead.tags && lead.tags.length > 0 ? lead.tags.map(tag => (
                                                 <span
                                                     key={tag.id}
                                                     className="text-[10px] px-1.5 py-0.5 rounded border"
@@ -1450,7 +1450,7 @@ const Leads = () => {
                                                 >
                                                     {tag.label}
                                                 </span>
-                                            ))}
+                                            )) : null}
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">

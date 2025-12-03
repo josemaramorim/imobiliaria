@@ -26,7 +26,7 @@ router.post('/login', async (req, res) => {
   const payload: any = { sub: user.id, role: user.role };
   if (user.tenantId) payload.tenantId = user.tenantId;
   const token = jwt.sign(payload, process.env.JWT_SECRET || 'dev', { expiresIn: '8h' });
-  return res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
+  return res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, tenantId: user.tenantId } });
 });
 
 export default router;

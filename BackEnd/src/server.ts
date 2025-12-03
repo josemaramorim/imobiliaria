@@ -32,14 +32,15 @@ try {
 }
 import usersRouter from './routes/users';
 
-dotenv.config();
+// Debug: verificar qual DATABASE_URL está sendo usada
+console.log('🛠️  DATABASE_URL configurada:', process.env.DATABASE_URL?.substring(0, 50) + '...');
 
 export const createServer = async () => {
   const app = express();
 
   // Configuração de CORS com whitelist de origens permitidas
   app.use(cors({
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173'],
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173', 'http://localhost:3000'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-Id']
@@ -72,21 +73,21 @@ export const createServer = async () => {
   });
 
   app.use('/health', healthRouter);
-  app.use('/auth', authLimiter, authRouter);
+  app.use('/auth', authRouter);
   // Aplicar rate limiting geral em todas as rotas da API
-  app.use('/users', apiLimiter, usersRouter);
-  app.use('/tenants', apiLimiter, tenantsRouter);
-  app.use('/plans', apiLimiter, plansRouter);
-  app.use('/properties', apiLimiter, propertiesRouter);
-  app.use('/leads', apiLimiter, leadsRouter);
-  app.use('/opportunities', apiLimiter, opportunitiesRouter);
-  app.use('/interactions', apiLimiter, interactionsRouter);
-  app.use('/visits', apiLimiter, visitsRouter);
-  app.use('/invoices', apiLimiter, invoicesRouter);
-  app.use('/apikeys', apiLimiter, apiKeysRouter);
+  app.use('/users', usersRouter);
+  app.use('/tenants', tenantsRouter);
+  app.use('/plans', plansRouter);
+  app.use('/properties', propertiesRouter);
+  app.use('/leads', leadsRouter);
+  app.use('/opportunities', opportunitiesRouter);
+  app.use('/interactions', interactionsRouter);
+  app.use('/visits', visitsRouter);
+  app.use('/invoices', invoicesRouter);
+  app.use('/apikeys', apiKeysRouter);
   app.use('/webhooks', webhooksRouter); // Webhooks não devem ter rate limit (vêm de serviços externos)
   app.use('/webhooks', paymentWebhooksRouter); // /webhooks/payments
-  app.use('/checkout', apiLimiter, checkoutRouter);
+  app.use('/checkout', checkoutRouter);
 
   // Mount interactive API documentation
   app.use('/docs', swaggerUi.serve, swaggerUi.setup(openapiSpec));
