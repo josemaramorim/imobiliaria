@@ -131,10 +131,10 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
       try {
         const { api } = await import('../services/api');
         // list properties
-        const props = await api.listProperties(currentTenant?.id);
+        const props = await api.listProperties();
         if (Array.isArray(props)) setProperties(props as any);
         // list leads
-        const lds = await api.listLeads(currentTenant?.id);
+        const lds = await api.listLeads();
         if (Array.isArray(lds)) setLeads(lds as any);
       } catch (err) {
         // keep local mocks if backend calls fail
