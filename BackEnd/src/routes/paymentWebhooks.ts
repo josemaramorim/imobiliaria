@@ -33,7 +33,7 @@ router.post('/payments', async (req: Request, res: Response) => {
     else if (status.includes('OVERDUE') || status.includes('LATE')) newStatus = 'OVERDUE';
     else newStatus = 'PENDING';
 
-    await prisma.invoice.update({ where: { id: invoice.id }, data: { status: newStatus, gatewayData: { ...invoice.gatewayData, lastWebhook: payload }, paidDate: newStatus === 'PAID' ? new Date() : invoice.paidDate } });
+    await prisma.invoice.update({ where: { id: invoice.id }, data: { status: newStatus, gatewayData: { ...(invoice.gatewayData as any), lastWebhook: payload }, paidDate: newStatus === 'PAID' ? new Date() : invoice.paidDate } });
 
     console.log(`[webhook] invoice ${invoice.id} updated to ${newStatus}`);
     return res.json({ success: true });

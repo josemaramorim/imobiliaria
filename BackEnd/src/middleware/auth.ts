@@ -16,7 +16,7 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
   const token = authHeader.replace(/^Bearer\s+/i, '') || null;
   if (!token) return res.status(401).json({ error: 'token_missing' });
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as any;
+    const payload = jwt.verify(token, JWT_SECRET as string) as any;
     req.user = { sub: payload.sub, role: payload.role };
     return next();
   } catch (err) {

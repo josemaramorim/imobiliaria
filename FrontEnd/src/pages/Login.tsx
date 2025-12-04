@@ -16,7 +16,7 @@ const Login = () => {
     const emailRef = useRef<HTMLInputElement | null>(null);
 
     const validateEmail = (value: string) => {
-        const re = /^(([^<>()\[\]\\.,;:\s@\"]+(\.[^<>()\[\]\\.,;:\s@\"]+)*)|(".+"))@(([^<>()[\]\\.,;:\s@\"]+\.)+[^<>()[\]\\.,;:\s@\"]{2,})$/i;
+        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return re.test(String(value).toLowerCase());
     };
 
