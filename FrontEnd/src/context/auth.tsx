@@ -28,10 +28,9 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
   // treating a stale `apollo_session_user` without a token as authenticated.
   useEffect(() => {
     const token = sessionStorage.getItem('apollo_token');
-    console.log('[Auth] Checking session on load. Token exists:', !!token);
 
     if (!token) {
-      console.log('[Auth] No token found, clearing session');
+      // no token => ensure any stale session data is cleared
       sessionStorage.removeItem('apollo_session_user');
       setUser(null);
       setIsLoading(false);
@@ -40,31 +39,25 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
 
     (async () => {
       try {
-        console.log('[Auth] Validating token with /users/me...');
         // validate token by fetching /users/me
         const { user: me } = await (await import('../services/api')).api.getMe();
-        console.log('[Auth] Token valid, user:', me?.email);
         setUser(me || null);
         if (me) sessionStorage.setItem('apollo_session_user', JSON.stringify(me));
       } catch (err) {
-        console.warn('[Auth] Validation failed:', err);
         // Try to recover from sessionStorage before logging out
         const cachedUser = sessionStorage.getItem('apollo_session_user');
-        console.log('[Auth] Falling back to cached user:', !!cachedUser);
 
         if (cachedUser) {
           try {
-            const parsed = JSON.parse(cachedUser);
-            console.log('[Auth] Restored user from cache:', parsed.email);
-            setUser(parsed);
+            setUser(JSON.parse(cachedUser));
           } catch {
-            console.error('[Auth] Cached user data invalid');
+            // Invalid cached data, clear everything
             sessionStorage.removeItem('apollo_token');
             sessionStorage.removeItem('apollo_session_user');
             setUser(null);
           }
         } else {
-          console.log('[Auth] No cached user to restore');
+          // No cached user, clear token
           sessionStorage.removeItem('apollo_token');
           setUser(null);
         }
@@ -77,29 +70,19 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      console.log('[Auth] Attempting login for:', email);
       const { api } = await import('../services/api');
       const resp = await api.login(email, password);
       // resp: { token, user }
-      if (!resp || !resp.token) {
-        console.error('[Auth] Login response missing token:', resp);
-        throw new Error('auth.error.invalid');
-      }
+      if (!resp || !resp.token) throw new Error('auth.error.invalid');
 
-      console.log('[Auth] Login successful. Saving token:', resp.token.substring(0, 10) + '...');
       sessionStorage.setItem('apollo_token', resp.token);
       sessionStorage.setItem('apollo_session_user', JSON.stringify(resp.user));
-
-      // Verify immediate storage
-      const storedToken = sessionStorage.getItem('apollo_token');
-      console.log('[Auth] Immediate verification - Token in storage:', !!storedToken);
 
       if (resp.user && (resp.user as any).tenantId) {
         sessionStorage.setItem('apollo_current_tenant', JSON.stringify((resp.user as any).tenantId));
       }
       setUser(resp.user);
     } catch (err) {
-      console.error('[Auth] Login error:', err);
       throw err;
     } finally {
       setIsLoading(false);
@@ -107,7 +90,6 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
   };
 
   const logout = () => {
-    console.log('[Auth] Logging out...');
     setUser(null);
     sessionStorage.removeItem('apollo_session_user');
     sessionStorage.removeItem('apollo_token');
