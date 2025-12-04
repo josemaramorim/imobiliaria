@@ -43,7 +43,8 @@ router.put('/:id', requireAuth, identifyTenant, requireTenant, requireOwnership(
   const id = req.params.id;
   const partial = req.body;
   try {
-    const lead = await prisma.lead.update({ where: { id }, data: partial });
+    const { id: _id, tenantId: _tenantId, createdAt: _createdAt, updatedAt: _updatedAt, ...updateData } = partial;
+    const lead = await prisma.lead.update({ where: { id }, data: updateData });
     return res.json({ lead });
   } catch (err: any) {
     console.error('update lead err', err);
