@@ -349,8 +349,8 @@ const DealFormModal: React.FC<DealFormModalProps> = ({ isOpen, onClose, onSubmit
                                             type="button"
                                             onClick={() => toggleTag(tag)}
                                             className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${isSelected
-                                                    ? 'bg-indigo-100 text-indigo-700 border-indigo-200'
-                                                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                                                ? 'bg-indigo-100 text-indigo-700 border-indigo-200'
+                                                : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                                                 }`}
                                         >
                                             {isSelected && <Check className="w-3 h-3" />}
@@ -476,7 +476,10 @@ const VisitFormModal: React.FC<{ isOpen: boolean; onClose: () => void; onSubmit:
                                 disabled={!isAdmin}
                                 className={`w-full h-10 pl-9 pr-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 appearance-none ${!isAdmin ? 'bg-gray-100 text-gray-500' : 'bg-white'}`}
                             >
-                                {team.map(member => (
+                                {team.filter(member => {
+                                    if (isAdmin) return true;
+                                    return member.id === user?.id;
+                                }).map(member => (
                                     <option key={String(member.id)} value={member.id}>{member.name}</option>
                                 ))}
                             </select>
@@ -599,7 +602,7 @@ const CalendarView: React.FC<{ visits: Visit[]; onAdd: () => void; onEdit: (v: V
                 </div>
 
                 <div className="flex items-center gap-3">
-                    {(isAdmin || isManager) && (
+                    {isAdmin && (
                         <div className="flex items-center gap-2">
                             <span className="text-sm text-gray-500 hidden sm:inline">{t('crm.calendar.filter_agent')}</span>
                             <select
@@ -618,7 +621,7 @@ const CalendarView: React.FC<{ visits: Visit[]; onAdd: () => void; onEdit: (v: V
                         </div>
                     )}
 
-                    {!isAdmin && !isManager && (
+                    {!isAdmin && (
                         <div className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1.5 rounded-lg flex items-center gap-2">
                             <UserIcon className="w-4 h-4" />
                             {t('crm.calendar.my_agenda')}
@@ -815,8 +818,8 @@ const CRM: React.FC<CRMProps> = ({ defaultView = 'kanban' }) => {
                     <button
                         onClick={() => setViewMode(viewMode === 'kanban' ? 'calendar' : 'kanban')}
                         className={`flex items-center gap-2 px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${viewMode === 'calendar'
-                                ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
-                                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                            ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                            : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
                             }`}
                     >
                         {viewMode === 'kanban' ? <Calendar className="w-4 h-4" /> : <Columns className="w-4 h-4" />}
