@@ -7,13 +7,14 @@ import App from './App';
 // with a fresh state. We remove any key that starts with `apollo_` in both
 // localStorage and sessionStorage to avoid stale sessions.
 if (typeof window !== 'undefined') {
-  try {
-    Object.keys(localStorage).forEach(k => { if (k.startsWith('apollo_')) localStorage.removeItem(k); });
-  } catch (e) { /* ignore */ }
-  try {
-    Object.keys(sessionStorage).forEach(k => { if (k.startsWith('apollo_')) sessionStorage.removeItem(k); });
-  } catch (e) { /* ignore */ }
-  console.debug('[Init] Cleared old apollo_* keys from storages');
+  // REMOVED: Automatic cleanup of session storage was causing logout on refresh
+  // try {
+  //   Object.keys(localStorage).forEach(k => { if (k.startsWith('apollo_')) localStorage.removeItem(k); });
+  // } catch (e) { /* ignore */ }
+  // try {
+  //   Object.keys(sessionStorage).forEach(k => { if (k.startsWith('apollo_')) sessionStorage.removeItem(k); });
+  // } catch (e) { /* ignore */ }
+  console.debug('[Init] Session cleanup skipped to allow persistence');
 }
 
 const rootElement = document.getElementById('root');
