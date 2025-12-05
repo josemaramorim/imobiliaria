@@ -258,6 +258,11 @@ const Team = () => {
     const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
 
     const filteredTeam = team.filter(member => {
+        // Non-admins can only see themselves
+        if (user?.role !== 'ADMIN' && member.email !== user?.email) {
+            return false;
+        }
+
         if (searchTerm) {
             const lowerSearch = searchTerm.toLowerCase();
             if (!member.name.toLowerCase().includes(lowerSearch) && !member.email.toLowerCase().includes(lowerSearch)) {

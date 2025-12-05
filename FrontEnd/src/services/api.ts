@@ -62,6 +62,23 @@ export const api = {
     return resp.data;
   },
 
+  // Users / Team
+  listUsers: async () => {
+    const resp = await client.get('/users');
+    return resp.data.users || [];
+  },
+  createUser: async (payload: any) => {
+    const resp = await client.post('/users', payload);
+    return resp.data.user;
+  },
+  updateUser: async (id: string, payload: any) => {
+    const resp = await client.put(`/users/${id}`, payload);
+    return resp.data.user;
+  },
+  deleteUser: async (id: string) => {
+    await client.delete(`/users/${id}`);
+  },
+
   // Tenants & Plans (admin)
   listTenants: async () => {
     const resp = await client.get('/tenants');
