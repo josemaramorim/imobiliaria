@@ -327,9 +327,56 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
   const updateOpportunity = (opp: Opportunity) => setOpportunities(p => p.map(o => o.id === opp.id ? opp : o));
   const deleteOpportunity = (id: string) => setOpportunities(p => p.filter(o => o.id !== id));
 
-  const addTeamMember = (user: User) => setAllTeam(p => [...p, { ...user, tenantId: currentTenant.id }]);
-  const updateTeamMember = (user: User) => setAllTeam(p => p.map(u => u.id === user.id ? user : u));
-  const deleteTeamMember = (id: string) => setAllTeam(p => p.filter(u => u.id !== id));
+  const addTeamMember = (user: User) => {
+    // Optimistic update
+    setAllTeam(p => [...p, { ...user, tenantId: currentTenant.id }]);
+
+    // Persist to backend
+    (async () => {
+      try {
+        const { api } = await import('../services/api');
+        await api.createUser(user);
+      } catch (err) {
+        // Revert on error
+        setAllTeam(p => p.filter(u => u.id !== user.id));
+        console.error('Falha ao criar usuário:', err);
+      }
+    })();
+  };
+  const updateTeamMember = (user: User) => {
+    const previous = allTeam;
+    // Optimistic update
+    setAllTeam(p => p.map(u => u.id === user.id ? user : u));
+
+    // Persist to backend
+    (async () => {
+      try {
+        const { api } = await import('../services/api');
+        await api.updateUser(user.id, user);
+      } catch (err) {
+        // Revert on error
+        setAllTeam(previous);
+        console.error('Falha ao atualizar usuário:', err);
+      }
+    })();
+  };
+  const deleteTeamMember = (id: string) => {
+    const previous = allTeam;
+    // Optimistic update
+    setAllTeam(p => p.filter(u => u.id !== id));
+
+    // Persist to backend
+    (async () => {
+      try {
+        const { api } = await import('../services/api');
+        await api.deleteUser(id);
+      } catch (err) {
+        // Revert on error
+        setAllTeam(previous);
+        console.error('Falha ao deletar usuário:', err);
+      }
+    })();
+  };
 
   const updatePropertyCustomFields = (fields: CustomFieldConfig[]) => setPropertyCustomFields(fields);
   const updateLeadCustomFields = (fields: CustomFieldConfig[]) => setLeadCustomFields(fields);
