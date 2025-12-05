@@ -71,7 +71,7 @@ export const interactionSchema = z.object({
   createdBy: z.string().min(1),
   leadId: z.string().optional(),
   opportunityId: z.string().optional(),
-  tenantId: z.string().min(1),
+  tenantId: z.string().min(1).optional(), // Optional because middleware adds it
 });
 
 export const visitSchema = z.object({

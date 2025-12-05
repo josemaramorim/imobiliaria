@@ -62,6 +62,16 @@ export const api = {
     return resp.data;
   },
 
+  // Interactions
+  createInteraction: async (payload: any) => {
+    const resp = await client.post('/interactions', payload);
+    return resp.data.interaction;
+  },
+  deleteInteraction: async (id: string) => {
+    const resp = await client.delete(`/interactions/${id}`);
+    return resp.data;
+  },
+
   // Users / Team
   listUsers: async () => {
     const resp = await client.get('/users');

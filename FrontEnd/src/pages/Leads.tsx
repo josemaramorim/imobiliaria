@@ -231,7 +231,7 @@ const LeadDetailsSidebar: React.FC<LeadDetailsSidebarProps> = ({ isOpen, onClose
 
     if (!isOpen || !lead) return null;
 
-    const handleAddInteraction = (e: React.FormEvent) => {
+    const handleAddInteraction = async (e: React.FormEvent) => {
         e.preventDefault();
         const interaction: Interaction = {
             id: `int_${Date.now()}`,
@@ -246,12 +246,29 @@ const LeadDetailsSidebar: React.FC<LeadDetailsSidebarProps> = ({ isOpen, onClose
             interactions: [interaction, ...(lead.interactions || [])]
         };
 
+        // Optimistic update
         onUpdate(updatedLead);
         setNewInteraction({
             type: 'NOTE',
             notes: '',
             date: new Date().toISOString().slice(0, 16)
         });
+
+        // Persist to backend
+        try {
+            const { api } = await import('../services/api');
+            await api.createInteraction({
+                type: newInteraction.type,
+                date: new Date(newInteraction.date).toISOString(),
+                notes: newInteraction.notes,
+                leadId: lead.id,
+                createdBy: user?.id || 'unknown'
+            });
+        } catch (err) {
+            console.error('Falha ao salvar interação:', err);
+            // Revert optimistic update on error
+            onUpdate(lead);
+        }
     };
 
     return (
