@@ -20,16 +20,45 @@ import checkoutRouter from './routes/checkout';
 import paymentWebhooksRouter from './routes/paymentWebhooks';
 import swaggerUi from 'swagger-ui-express';
 import fs from 'fs';
+import path from 'path';
 import yaml from 'js-yaml';
-const openapiJson: any = require('./openapi.json');
-let openapiSpec: any = openapiJson;
-try {
-  const text = fs.readFileSync(__dirname + '/openapi.yaml', 'utf8');
-  if (text && text.trim().length > 0) {
-    openapiSpec = yaml.load(text);
+
+const resolveSpecPath = (filename: string) => {
+  const candidates = [
+    path.join(__dirname, filename),
+    path.join(__dirname, '..', 'src', filename),
+  ];
+  return candidates.find((candidate) => fs.existsSync(candidate));
+};
+
+const loadJsonSpec = () => {
+  const jsonPath = resolveSpecPath('openapi.json');
+  if (!jsonPath) {
+    return null;
   }
-} catch (err) {
-  console.warn('openapi.yaml not found or parse failed, falling back to openapi.json');
+  try {
+    const jsonText = fs.readFileSync(jsonPath, 'utf8');
+    return JSON.parse(jsonText);
+  } catch (err) {
+    console.warn(`Failed to read openapi.json at ${jsonPath}:`, err);
+    return null;
+  }
+};
+
+const openapiYamlPath = resolveSpecPath('openapi.yaml');
+let openapiSpec: any = loadJsonSpec() ?? {};
+
+if (openapiYamlPath) {
+  try {
+    const yamlText = fs.readFileSync(openapiYamlPath, 'utf8');
+    if (yamlText && yamlText.trim().length > 0) {
+      openapiSpec = yaml.load(yamlText);
+    }
+  } catch (err) {
+    console.warn(`openapi.yaml parse failed (${openapiYamlPath}), falling back to openapi.json`);
+  }
+} else {
+  console.warn('openapi.yaml not found, using JSON spec if available');
 }
 import usersRouter from './routes/users';
 
@@ -96,8 +125,12 @@ export const createServer = async () => {
 
   // Serve raw YAML spec for download/integration tools
   app.get('/openapi.yaml', (_req, res) => {
+    if (!openapiYamlPath) {
+      res.status(404).send('openapi.yaml not available');
+      return;
+    }
     try {
-      const yamlText = fs.readFileSync(__dirname + '/openapi.yaml', 'utf8');
+      const yamlText = fs.readFileSync(openapiYamlPath, 'utf8');
       res.type('text/yaml').send(yamlText);
     } catch (err) {
       res.status(404).send('openapi.yaml not available');
