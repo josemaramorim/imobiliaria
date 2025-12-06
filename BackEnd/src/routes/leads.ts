@@ -48,7 +48,10 @@ router.put('/:id', requireAuth, identifyTenant, requireTenant, requireOwnership(
   const id = req.params.id;
   const partial = req.body;
   try {
-    const { id: _id, tenantId: _tenantId, createdAt: _createdAt, updatedAt: _updatedAt, tags: _tags, interactions: _interactions, opportunities: _opportunities, ...updateData } = partial;
+    const updateData = { ...partial };
+    const forbidden = ['id', 'tenantId', 'createdAt', 'updatedAt', 'tags', 'interactions', 'opportunities'];
+    forbidden.forEach(key => delete updateData[key]);
+
     const lead = await prisma.lead.update({ where: { id }, data: updateData });
     return res.json({ lead });
   } catch (err: any) {

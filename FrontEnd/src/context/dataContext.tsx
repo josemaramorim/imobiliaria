@@ -88,9 +88,11 @@ const useSessionStorage = <T,>(key: string, initialValue: T): [T, React.Dispatch
   });
 
   const setValue: React.Dispatch<React.SetStateAction<T>> = (value) => {
-    const valueToStore = value instanceof Function ? value(storedValue) : value;
-    setStoredValue(valueToStore);
-    window.sessionStorage.setItem(key, JSON.stringify(valueToStore));
+    setStoredValue((prev) => {
+      const valueToStore = value instanceof Function ? (value as Function)(prev) : value;
+      window.sessionStorage.setItem(key, JSON.stringify(valueToStore));
+      return valueToStore;
+    });
   };
   return [storedValue, setValue];
 };
@@ -144,6 +146,9 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         // list leads
         const lds = await api.listLeads();
         if (Array.isArray(lds)) setLeads(lds as any);
+        // list visits
+        const vsts = await api.listVisits();
+        if (Array.isArray(vsts)) setVisits(vsts as any);
       } catch (err) {
         // keep local mocks if backend calls fail
         console.warn('Backend fetch failed, continuing with local state', err);
@@ -217,9 +222,51 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
   };
 
   // --- Tenant Data CRUD ---
-  const addVisit = (visit: Visit) => setVisits(p => [...p, visit]);
-  const updateVisit = (visit: Visit) => setVisits(p => p.map(v => v.id === visit.id ? visit : v));
-  const deleteVisit = (id: string) => setVisits(p => p.filter(v => v.id !== id));
+  const addVisit = (visit: Visit) => {
+    setVisits(p => [...p, visit]);
+    const token = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
+    if (!token) return;
+    (async () => {
+      try {
+        const { api } = await import('../services/api');
+        const created = await api.createVisit(visit);
+        setVisits(prev => prev.map(item => item.id === visit.id ? created : item));
+      } catch (err) {
+        console.error('Failed to create visit remote:', err);
+      }
+    })();
+  };
+
+  const updateVisit = (visit: Visit) => {
+    setVisits(p => p.map(v => v.id === visit.id ? visit : v));
+    const token = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
+    if (!token) return;
+    (async () => {
+      try {
+        const { api } = await import('../services/api');
+        const updated = await api.updateVisit(visit.id, visit);
+        setVisits(prev => prev.map(item => item.id === visit.id ? updated : item));
+      } catch (err) {
+        console.error('Failed to update visit remote:', err);
+      }
+    })();
+  };
+
+  const deleteVisit = (id: string) => {
+    const previous = visits;
+    setVisits(p => p.filter(v => v.id !== id));
+    const token = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
+    if (!token) return;
+    (async () => {
+      try {
+        const { api } = await import('../services/api');
+        await api.deleteVisit(id);
+      } catch (err) {
+        console.error('Failed to delete visit remote, reverting:', err);
+        setVisits(previous);
+      }
+    })();
+  };
 
   const addLead = (lead: Lead) => {
     setLeads(p => [{ ...lead, tenantId: currentTenant.id }, ...p]);

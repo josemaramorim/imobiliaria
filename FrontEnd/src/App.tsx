@@ -24,6 +24,7 @@ import Dashboard from './pages/Dashboard';
 import Properties from './pages/Properties';
 import CRM from './pages/CRM';
 import Leads from './pages/Leads';
+import Agenda from './pages/Agenda';
 import Team from './pages/Team';
 import AppSettings from './pages/AppSettings';
 import SaaSAdmin from './pages/SaaSAdmin';
@@ -42,8 +43,8 @@ const SidebarItem = ({ to, icon: Icon, label, active }: { to: string, icon: any,
   <Link
     to={to}
     className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${active
-        ? 'bg-primary-50 text-primary-700'
-        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+      ? 'bg-primary-50 text-primary-700'
+      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
       }`}
   >
     <Icon className={`w-5 h-5 ${active ? 'text-primary-600' : 'text-gray-400'}`} />
@@ -137,6 +138,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) 
             <SidebarItem to="/properties" icon={Building2} label={t('nav.properties')} active={path === '/properties'} />
             <SidebarItem to="/crm" icon={Briefcase} label={t('nav.crm')} active={path === '/crm'} />
             <SidebarItem to="/leads" icon={Contact} label={t('nav.leads')} active={path === '/leads'} />
+            <SidebarItem to="/agenda" icon={CalendarDays} label={t('nav.agenda')} active={path === '/agenda'} />
             <SidebarItem to="/team" icon={Users} label={t('nav.team')} active={path === '/team'} />
           </nav>
 
@@ -197,6 +199,7 @@ const ProtectedLayout = () => {
             <Route path="/properties" element={<Properties />} />
             <Route path="/crm" element={<CRM />} />
             <Route path="/leads" element={<Leads />} />
+            <Route path="/agenda" element={<Agenda />} />
             <Route path="/team" element={<Team />} />
             <Route path="/settings" element={<AppSettings />} />
             {/* FIX: Removed duplicate route definition for /admin/tenants */}

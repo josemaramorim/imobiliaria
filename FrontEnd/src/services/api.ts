@@ -97,6 +97,24 @@ export const api = {
   listPlans: async () => {
     const resp = await client.get('/plans');
     return resp.data.plans || [];
+  },
+
+  // Visits
+  listVisits: async () => {
+    const resp = await client.get('/visits');
+    return resp.data.visits || [];
+  },
+  createVisit: async (payload: any) => {
+    const resp = await client.post('/visits', payload);
+    return resp.data.visit;
+  },
+  updateVisit: async (id: string, payload: any) => {
+    const resp = await client.put(`/visits/${id}`, payload);
+    return resp.data.visit;
+  },
+  deleteVisit: async (id: string) => {
+    const resp = await client.delete(`/visits/${id}`);
+    return resp.data;
   }
 };
 

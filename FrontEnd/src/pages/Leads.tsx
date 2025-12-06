@@ -4,6 +4,8 @@ import { useLanguage } from '../config/i18n';
 import { Lead, Tag, CustomFieldConfig, CustomFieldType, Interaction, InteractionType } from '../types/types';
 import { Can, usePermission } from '../context/auth';
 import { Search, Plus, Filter, Mail, Phone, Tag as TagIcon, MoreHorizontal, Edit2, Trash2, X, Check, Settings, Palette, User, CheckCircle, XCircle, SlidersHorizontal, ChevronDown, Square, CheckSquare, List, AlertTriangle, Eye, MessageSquare, Calendar, FileText, Clock, Send, Save, RotateCcw } from 'lucide-react';
+import VisitFormModal from '../components/VisitFormModal';
+import { Visit } from '../types/types';
 
 // --- Shared Components ---
 
@@ -223,11 +225,35 @@ const InteractionItem: React.FC<{ interaction: Interaction }> = ({ interaction }
 const LeadDetailsSidebar: React.FC<LeadDetailsSidebarProps> = ({ isOpen, onClose, lead, onUpdate }) => {
     const { t } = useLanguage();
     const { user } = usePermission();
+    const { addVisit } = useData();
+    const [isVisitModalOpen, setIsVisitModalOpen] = useState(false);
     const [newInteraction, setNewInteraction] = useState<{ type: InteractionType, notes: string, date: string }>({
         type: 'NOTE',
         notes: '',
         date: new Date().toISOString().slice(0, 16)
     });
+
+    const handleSaveVisit = (visitData: Partial<Visit>) => {
+        if (!lead) return;
+
+        const newVisit: Visit = {
+            id: `visit_${Date.now()}`,
+            leadId: lead.id,
+            leadName: lead.name,
+            date: visitData.date || new Date().toISOString(),
+            brokerId: visitData.brokerId || user?.id || '',
+            propertyId: '',
+            propertyTitle: visitData.propertyTitle || '',
+            notes: visitData.notes || '',
+            status: 'SCHEDULED',
+            reminderEnabled: visitData.reminderEnabled ?? true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            tenantId: lead.tenantId
+        };
+        addVisit(newVisit);
+        setIsVisitModalOpen(false);
+    };
 
     if (!isOpen || !lead) return null;
 
@@ -339,10 +365,19 @@ const LeadDetailsSidebar: React.FC<LeadDetailsSidebarProps> = ({ isOpen, onClose
 
                     {/* Timeline / History */}
                     <div>
-                        <h4 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                            <List className="w-4 h-4" />
-                            {t('leads.history.title')}
-                        </h4>
+                        <div className="flex justify-between items-center mb-4">
+                            <h4 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                                <List className="w-4 h-4" />
+                                {t('leads.history.title')}
+                            </h4>
+                            <button
+                                onClick={() => setIsVisitModalOpen(true)}
+                                className="text-xs font-medium text-indigo-600 hover:text-indigo-800 flex items-center gap-1 bg-indigo-50 px-2 py-1 rounded-lg border border-indigo-100"
+                            >
+                                <Calendar className="w-3.5 h-3.5" />
+                                {t('crm.new_event')}
+                            </button>
+                        </div>
 
                         {/* Add Interaction Form */}
                         <div className="bg-indigo-50/50 border border-indigo-100 rounded-lg p-4 mb-6">
@@ -413,6 +448,19 @@ const LeadDetailsSidebar: React.FC<LeadDetailsSidebarProps> = ({ isOpen, onClose
                     </div>
                 </div>
             </div>
+            <VisitFormModal
+                isOpen={isVisitModalOpen}
+                onClose={() => setIsVisitModalOpen(false)}
+                onSubmit={handleSaveVisit}
+                initialData={{
+                    leadName: lead.name,
+                    date: new Date().toISOString(),
+                    brokerId: user?.id || '',
+                    propertyTitle: '',
+                    notes: '',
+                    reminderEnabled: true
+                } as any}
+            />
         </div>
     );
 };
