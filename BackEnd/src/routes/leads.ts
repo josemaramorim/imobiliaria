@@ -28,16 +28,22 @@ router.post('/', requireAuth, identifyTenant, requireTenant, async (req: any, re
   const { tags, ...leadData } = parsed.data;
   try {
     const lead = await prisma.lead.create({ data: { ...leadData, tenantId: res.locals.tenantId } });
-    // if tags were sent, create or connect them
-    if (tags && tags.length > 0) {
-      for (const t of tags) {
-        const existing = await prisma.tag.findFirst({ where: { label: t.label, tenantId: res.locals.tenantId } });
-        if (!existing) {
-          await prisma.tag.create({ data: { label: t.label, color: t.color, tenantId: res.locals.tenantId } });
-        }
+    // if tags were sent, connect them to the lead
+    if (tags && Array.isArray(tags) && tags.length > 0) {
+      const tagIds = tags.map((t: any) => t.id).filter(Boolean);
+      if (tagIds.length > 0) {
+        await prisma.lead.update({
+          where: { id: lead.id },
+          data: { tags: { connect: tagIds.map((tagId: string) => ({ id: tagId })) } }
+        });
       }
     }
-    return res.status(201).json({ lead });
+    // Return lead with tags
+    const createdLead = await prisma.lead.findUnique({
+      where: { id: lead.id },
+      include: { tags: true, interactions: { orderBy: { date: 'desc' } } }
+    });
+    return res.status(201).json({ lead: createdLead });
   } catch (err: any) {
     console.error('create lead err', err);
     return res.status(500).json({ error: 'server_error', message: err.message });
@@ -48,9 +54,39 @@ router.put('/:id', requireAuth, identifyTenant, requireTenant, requireOwnership(
   const id = req.params.id;
   const partial = req.body;
   try {
-    const { id: _id, tenantId: _tenantId, createdAt: _createdAt, updatedAt: _updatedAt, tags: _tags, interactions: _interactions, opportunities: _opportunities, ...updateData } = partial;
+    const { tags, ...updateData } = partial;
+    const forbidden = ['id', 'tenantId', 'createdAt', 'updatedAt', 'interactions', 'opportunities'];
+    forbidden.forEach(key => delete updateData[key]);
+
+    // Update lead basic fields
     const lead = await prisma.lead.update({ where: { id }, data: updateData });
-    return res.json({ lead });
+
+    // Update tags if provided
+    if (tags !== undefined) {
+      // Disconnect all existing tags first
+      await prisma.lead.update({
+        where: { id },
+        data: { tags: { set: [] } }
+      });
+
+      // Connect new tags
+      if (Array.isArray(tags) && tags.length > 0) {
+        const tagIds = tags.map((t: any) => t.id).filter(Boolean);
+        if (tagIds.length > 0) {
+          await prisma.lead.update({
+            where: { id },
+            data: { tags: { connect: tagIds.map((tagId: string) => ({ id: tagId })) } }
+          });
+        }
+      }
+    }
+
+    // Return lead with tags
+    const updatedLead = await prisma.lead.findUnique({
+      where: { id },
+      include: { tags: true, interactions: { orderBy: { date: 'desc' } } }
+    });
+    return res.json({ lead: updatedLead });
   } catch (err: any) {
     console.error('update lead err', err);
     return res.status(500).json({ error: 'server_error', message: err.message });

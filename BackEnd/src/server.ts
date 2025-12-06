@@ -12,6 +12,7 @@ import leadsRouter from './routes/leads';
 import opportunitiesRouter from './routes/opportunities';
 import interactionsRouter from './routes/interactions';
 import visitsRouter from './routes/visits';
+import tagsRouter from './routes/tags';
 import invoicesRouter from './routes/invoices';
 import apiKeysRouter from './routes/apikeys';
 import webhooksRouter from './routes/webhooks';
@@ -81,6 +82,7 @@ export const createServer = async () => {
   app.use('/properties', propertiesRouter);
   app.use('/leads', leadsRouter);
   app.use('/opportunities', opportunitiesRouter);
+  app.use('/tags', tagsRouter);
   app.use('/interactions', interactionsRouter);
   app.use('/visits', visitsRouter);
   app.use('/invoices', invoicesRouter);

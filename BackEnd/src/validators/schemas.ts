@@ -75,7 +75,7 @@ export const interactionSchema = z.object({
 });
 
 export const visitSchema = z.object({
-  propertyId: z.string().min(1),
+  propertyId: z.string().optional(),
   propertyTitle: z.string().min(1),
   leadName: z.string().min(1),
   date: z.string().refine((s) => !Number.isNaN(Date.parse(s)), { message: 'invalid_date' }),
@@ -83,7 +83,7 @@ export const visitSchema = z.object({
   status: z.enum(['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED']).optional(),
   notes: z.string().optional(),
   reminderEnabled: z.boolean().optional(),
-  tenantId: z.string().min(1),
+  tenantId: z.string().min(1).optional(),
 });
 
 export const invoiceSchema = z.object({
