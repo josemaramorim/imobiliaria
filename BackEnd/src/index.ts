@@ -7,8 +7,11 @@ const port = process.env.PORT || 4000;
 
 async function main() {
   const app = await createServer();
-  app.listen(port, () => {
-    console.log(`🚀 Server listening on http://localhost:${port}`);
+  // Bind explicitly to 0.0.0.0 so container platforms (Railway, Heroku, etc.) can expose the port.
+  const host = '0.0.0.0';
+  app.listen(port, host, () => {
+    console.log(`🚀 Server listening on http://${host}:${port}`);
+    console.log('🛰️  Public URL (if set):', process.env.RAILWAY_STATIC_URL || process.env.PUBLIC_URL || process.env.VERCEL_URL || 'not-set');
   });
 }
 
