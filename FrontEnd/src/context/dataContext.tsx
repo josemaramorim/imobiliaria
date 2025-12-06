@@ -149,6 +149,9 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         // list visits
         const vsts = await api.listVisits();
         if (Array.isArray(vsts)) setVisits(vsts as any);
+        // list tags
+        const tgs = await api.listTags();
+        if (Array.isArray(tgs)) setTags(tgs as any);
       } catch (err) {
         // keep local mocks if backend calls fail
         console.warn('Backend fetch failed, continuing with local state', err);
