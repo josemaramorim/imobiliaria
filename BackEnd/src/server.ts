@@ -68,13 +68,10 @@ console.log('🛠️  DATABASE_URL configurada:', process.env.DATABASE_URL?.subs
 export const createServer = async () => {
   const app = express();
 
-  // Configuração de CORS com whitelist de origens permitidas
-  app.use(cors({
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173', 'http://localhost:3000'],
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-Id']
-  }));
+  // Temporariamente permitir todas as origens (remover controle de CORS)
+  // Quando quiser reativar o controle de origins, restaure a configuração anterior
+  // e use a variável de ambiente `ALLOWED_ORIGINS`.
+  app.use(cors());
 
   app.use(express.json());
 
