@@ -3,7 +3,7 @@ dotenv.config(); // Carregar .env ANTES de qualquer outra importação
 
 import { createServer } from './server';
 
-const port = process.env.PORT || 4000;
+const port = Number(process.env.PORT) || 4000;
 
 async function main() {
   const app = await createServer();
