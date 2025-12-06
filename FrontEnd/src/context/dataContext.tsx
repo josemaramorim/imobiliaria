@@ -149,6 +149,9 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         // list visits
         const vsts = await api.listVisits();
         if (Array.isArray(vsts)) setVisits(vsts as any);
+        // list tags
+        const tgs = await api.listTags();
+        if (Array.isArray(tgs)) setTags(tgs as any);
       } catch (err) {
         // keep local mocks if backend calls fail
         console.warn('Backend fetch failed, continuing with local state', err);
@@ -314,9 +317,56 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     })();
   };
 
-  const addTag = (tag: Tag) => setTags(p => [...p, { ...tag, tenantId: currentTenant.id }]);
-  const updateTag = (tag: Tag) => setTags(p => p.map(t => t.id === tag.id ? tag : t));
-  const deleteTag = (id: string) => setTags(p => p.filter(t => t.id !== id));
+  const addTag = (tag: Tag) => {
+    // optimistic local add
+    setTags(p => [...p, { ...tag, tenantId: currentTenant.id }]);
+    const token = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
+    if (!token) return;
+    (async () => {
+      try {
+        const { api } = await import('../services/api');
+        const created = await api.createTag(tag);
+        // refresh list from backend to ensure consistency
+        const all = await api.listTags();
+        if (Array.isArray(all)) setTags(all as any);
+      } catch (err) {
+        console.error('Failed to create tag remote:', err);
+      }
+    })();
+  };
+
+  const updateTag = (tag: Tag) => {
+    const previous = tags;
+    setTags(p => p.map(t => t.id === tag.id ? tag : t));
+    const token = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
+    if (!token) return;
+    (async () => {
+      try {
+        const { api } = await import('../services/api');
+        const updated = await api.updateTag(tag.id, tag);
+        setTags(prev => prev.map(t => t.id === tag.id ? updated : t));
+      } catch (err) {
+        console.error('Failed to update tag remote, reverting:', err);
+        setTags(previous);
+      }
+    })();
+  };
+
+  const deleteTag = (id: string) => {
+    const previous = tags;
+    setTags(p => p.filter(t => t.id !== id));
+    const token = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
+    if (!token) return;
+    (async () => {
+      try {
+        const { api } = await import('../services/api');
+        await api.deleteTag(id);
+      } catch (err) {
+        console.error('Failed to delete tag remote, reverting:', err);
+        setTags(previous);
+      }
+    })();
+  };
 
   const addProperty = (prop: Property) => {
     // optimistic add
