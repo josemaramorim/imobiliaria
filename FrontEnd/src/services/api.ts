@@ -62,6 +62,24 @@ export const api = {
     return resp.data;
   },
 
+  // Tags
+  listTags: async () => {
+    const resp = await client.get('/tags');
+    return resp.data.tags || [];
+  },
+  createTag: async (payload: any) => {
+    const resp = await client.post('/tags', payload);
+    return resp.data.tag;
+  },
+  updateTag: async (id: string, payload: any) => {
+    const resp = await client.put(`/tags/${id}`, payload);
+    return resp.data.tag;
+  },
+  deleteTag: async (id: string) => {
+    const resp = await client.delete(`/tags/${id}`);
+    return resp.data;
+  },
+
   // Interactions
   createInteraction: async (payload: any) => {
     const resp = await client.post('/interactions', payload);
