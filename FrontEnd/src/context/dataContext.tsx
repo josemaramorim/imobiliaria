@@ -159,6 +159,41 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     })();
   }, [token, activeTenantId]);
 
+  useEffect(() => {
+    if (!token) return;
+
+    (async () => {
+      try {
+        const { api } = await import('../services/api');
+        const users = await api.listUsers();
+        if (Array.isArray(users)) {
+          setAllTeam(prev => {
+            const others = prev.filter(u => u.tenantId !== currentTenant.id);
+            return [...others, ...users];
+          });
+        }
+      } catch (err) {
+        console.warn('Failed to fetch team data, using local state', err);
+      }
+    })();
+  }, [token, currentTenant.id]);
+
+  // Load global SaaS data (tenants, plans) when authenticated
+  useEffect(() => {
+    if (!token) return;
+    (async () => {
+      try {
+        const { api } = await import('../services/api');
+        const tnts = await api.listTenants();
+        if (Array.isArray(tnts)) setTenants(tnts as any);
+        const pls = await api.listPlans();
+        if (Array.isArray(pls)) setPlans(pls as any);
+      } catch (err) {
+        console.warn('Failed to fetch global SaaS data, using local state', err);
+      }
+    })();
+  }, [token]);
+
   // Filtered data based on current tenant
   const team = allTeam.filter(t => t.tenantId === currentTenant.id);
   const invoices = allInvoices.filter(i => i.tenantId === currentTenant.id);
@@ -171,7 +206,8 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
   };
 
   const addTenant = (tenantData: Omit<Tenant, 'id' | 'createdAt'>, trialDuration: number) => {
-    const newTenant: Tenant = {
+    // optimistic local add
+    const tempTenant: Tenant = {
       ...tenantData,
       id: `tnt_${Date.now()}`,
       createdAt: new Date().toISOString(),
@@ -179,11 +215,49 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
       trialEndsAt: trialDuration > 0 ? new Date(new Date().setDate(new Date().getDate() + trialDuration)).toISOString() : undefined,
       nextBillingDate: trialDuration === 0 ? new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString() : undefined,
     };
-    setTenants(prev => [...prev, newTenant]);
+    setTenants(prev => [...prev, tempTenant]);
+    const tokenLocal = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
+    if (!tokenLocal) {
+      console.warn('[DataContext] addTenant: no auth token found — skipping remote create');
+      return;
+    }
+    (async () => {
+      try {
+        const { api } = await import('../services/api');
+        const created = await api.createTenant({ ...tenantData, trialDuration });
+        if (created && created.id) {
+          setTenants(prev => prev.map(t => t.id === tempTenant.id ? created : t));
+        } else {
+          const all = await api.listTenants();
+          if (Array.isArray(all)) setTenants(all as any);
+        }
+      } catch (err) {
+        console.error('Failed to create tenant remote:', err);
+      }
+    })();
   };
 
-  const updateTenant = (tenant: Tenant) => setTenants(prev => prev.map(t => t.id === tenant.id ? tenant : t));
+  const updateTenant = (tenant: Tenant) => {
+    const previous = tenants;
+    setTenants(prev => prev.map(t => t.id === tenant.id ? tenant : t));
+    const tokenLocal = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
+    if (!tokenLocal) {
+      console.warn('[DataContext] updateTenant: no auth token found — skipping remote update');
+      return;
+    }
+    (async () => {
+      try {
+        const { api } = await import('../services/api');
+        const updated = await api.updateTenant(tenant.id, tenant);
+        setTenants(prev => prev.map(t => t.id === tenant.id ? updated : t));
+      } catch (err) {
+        console.error('Failed to update tenant remote, reverting:', err);
+        setTenants(previous);
+      }
+    })();
+  };
   const deleteTenant = (tenantId: string) => {
+    const previous = tenants;
     setTenants(p => p.filter(t => t.id !== tenantId));
     setAllTeam(p => p.filter(u => u.tenantId !== tenantId));
     setAllInvoices(p => p.filter(i => i.tenantId !== tenantId));
@@ -192,6 +266,20 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         sessionStorage.removeItem(key);
       }
     });
+    const tokenLocal = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
+    if (!tokenLocal) {
+      console.warn('[DataContext] deleteTenant: no auth token found — skipping remote delete');
+      return;
+    }
+    (async () => {
+      try {
+        const { api } = await import('../services/api');
+        await api.deleteTenant(tenantId);
+      } catch (err) {
+        console.error('Failed to delete tenant remote, reverting:', err);
+        setTenants(previous);
+      }
+    })();
   };
 
   const updateGlobalSettings = (settings: GlobalSettings) => setGlobalSettings(settings);
@@ -449,7 +537,24 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     (async () => {
       try {
         const { api } = await import('../services/api');
-        await api.updateUser(user.id, user);
+        const tokenLocal = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
+        if (!tokenLocal) {
+          console.warn('[DataContext] updateTeamMember: token ausente — ignorando chamada remota');
+          return;
+        }
+
+        const payload = {
+          name: user.name,
+          email: user.email,
+          phone: user.phone || null,
+          role: user.role,
+          status: user.status,
+        };
+
+        const updated = await api.updateUser(user.id, payload);
+        if (updated) {
+          setAllTeam(prev => prev.map(u => u.id === user.id ? { ...u, ...updated } : u));
+        }
       } catch (err) {
         // Revert on error
         setAllTeam(previous);
@@ -466,7 +571,21 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     (async () => {
       try {
         const { api } = await import('../services/api');
+        const tokenLocal = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
+        if (!tokenLocal) {
+          console.warn('[DataContext] deleteTeamMember: token ausente — ignorando chamada remota');
+          return;
+        }
+
         await api.deleteUser(id);
+
+        const refreshed = await api.listUsers();
+        if (Array.isArray(refreshed)) {
+          setAllTeam(prev => {
+            const others = prev.filter(u => u.tenantId !== currentTenant.id);
+            return [...others, ...refreshed];
+          });
+        }
       } catch (err) {
         // Revert on error
         setAllTeam(previous);

@@ -112,6 +112,18 @@ export const api = {
     const resp = await client.get('/tenants');
     return resp.data.tenants || [];
   },
+  createTenant: async (payload: any) => {
+    const resp = await client.post('/tenants', payload);
+    return resp.data.tenant;
+  },
+  updateTenant: async (id: string, payload: any) => {
+    const resp = await client.put(`/tenants/${id}`, payload);
+    return resp.data.tenant;
+  },
+  deleteTenant: async (id: string) => {
+    const resp = await client.delete(`/tenants/${id}`);
+    return resp.data;
+  },
   listPlans: async () => {
     const resp = await client.get('/plans');
     return resp.data.plans || [];

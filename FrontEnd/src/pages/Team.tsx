@@ -244,7 +244,7 @@ const TeamMemberFormModal: React.FC<TeamMemberFormModalProps> = ({ isOpen, onClo
 const Team = () => {
     const { t } = useLanguage();
     const { team, addTeamMember, updateTeamMember, deleteTeamMember } = useData();
-    const { user } = usePermission();
+    const { user, hasPermission } = usePermission();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingMember, setEditingMember] = useState<User | null>(null);
@@ -382,9 +382,9 @@ const Team = () => {
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <Can permission="team.edit">
+                                                    {(isCurrentUser || hasPermission('team.edit')) && (
                                                         <button onClick={() => handleEditClick(member)} className="p-1.5 text-gray-400 hover:text-indigo-600 rounded-lg hover:bg-gray-50"><Edit2 className="w-4 h-4" /></button>
-                                                    </Can>
+                                                    )}
                                                     <Can permission="team.delete">
                                                         {!isCurrentUser && <button onClick={() => confirmDelete(member)} className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-gray-50"><Trash2 className="w-4 h-4" /></button>}
                                                     </Can>
@@ -455,9 +455,9 @@ const Team = () => {
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
                                                     <div className="flex justify-end items-center gap-1">
-                                                        <Can permission="team.edit">
+                                                        {(member.id === user?.id || hasPermission('team.edit')) && (
                                                             <button onClick={() => handleEditClick(member)} className="p-1.5 text-gray-400 hover:text-indigo-600 rounded-lg hover:bg-gray-100"><Edit2 className="w-4 h-4" /></button>
-                                                        </Can>
+                                                        )}
                                                         <Can permission="team.delete">
                                                             {member.id !== user?.id && <button onClick={() => confirmDelete(member)} className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-gray-100"><Trash2 className="w-4 h-4" /></button>}
                                                         </Can>
