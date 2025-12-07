@@ -16,13 +16,16 @@ async function main() {
   ]).catch(() => { });
 
   console.log('✨ Criando configurações globais...');
-  await prisma.globalSettings.create({ data: { platformName: 'Apollo Real Estate Cloud', defaultCurrency: 'BRL', maintenanceMode: false, allowSignups: true } });
+  await prisma.globalSettings.create({ data: { platformName: 'ImobIA', defaultCurrency: 'BRL', maintenanceMode: false, allowSignups: true } });
 
   console.log('✨ Criando gateways de pagamento...');
   await prisma.paymentGateway.createMany({
     data: [
       { id: 'stripe', name: 'Stripe', logo: '', themeColor: '#6772E5', status: 'ACTIVE', configFields: JSON.stringify([{ key: 'apiKey', label: 'API Key' }]) },
-      { id: 'pagarme', name: 'Pagar.me', logo: '', themeColor: '#1E3A8A', status: 'INACTIVE', configFields: JSON.stringify([{ key: 'token', label: 'Token' }]) }
+      { id: 'pagarme', name: 'Pagar.me', logo: '', themeColor: '#1E3A8A', status: 'INACTIVE', configFields: JSON.stringify([{ key: 'token', label: 'Token' }]) },
+      { id: 'asaas', name: 'Asaas', logo: '', themeColor: '#6772E5', status: 'ACTIVE', configFields: JSON.stringify([{ key: 'apiKey', label: 'API Key' }]) },
+      { id: 'pagseguro', name: 'PagSeguro', logo: '', themeColor: '#A5A5A5', status: 'ACTIVE', configFields: JSON.stringify([{ key: 'token', label: 'Token' }]) },      
+      { id: 'paypal', name: 'PayPal', logo: '', themeColor: '#003087', status: 'ACTIVE', configFields: JSON.stringify([{ key: 'clientId', label: 'Client ID' }, { key: 'clientSecret', label: 'Client Secret' }]) },
     ]
   });
 

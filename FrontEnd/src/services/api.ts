@@ -25,6 +25,14 @@ export const api = {
     const resp = await client.get('/users/me');
     return resp.data;
   },
+  getGlobalSettings: async () => {
+    const resp = await client.get('/settings/global');
+    return resp.data.settings;
+  },
+  updateGlobalSettings: async (payload: any) => {
+    const resp = await client.put('/settings/global', payload);
+    return resp.data.settings;
+  },
 
   // Properties
   listProperties: async () => {
@@ -145,6 +153,15 @@ export const api = {
   deleteVisit: async (id: string) => {
     const resp = await client.delete(`/visits/${id}`);
     return resp.data;
+  },
+
+  listCustomFields: async (entity: 'PROPERTY' | 'LEAD') => {
+    const resp = await client.get(`/custom-fields/${entity}`);
+    return resp.data.fields || [];
+  },
+  saveCustomFields: async (entity: 'PROPERTY' | 'LEAD', fields: any[]) => {
+    const resp = await client.put(`/custom-fields/${entity}`, { fields });
+    return resp.data.fields || [];
   }
 };
 

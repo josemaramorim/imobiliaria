@@ -194,11 +194,11 @@ export const MOCK_TEAM: User[] = [
 ];
 
 export const MOCK_CUSTOM_FIELDS: CustomFieldConfig[] = [
-  { key: 'property_type', label: 'Tipo de Imóvel', type: 'SELECT', options: ['Apartamento', 'Casa', 'Sobrado', 'Terreno', 'Comercial', 'Cobertura'], required: true },
-  { key: 'features', label: 'Comodidades', type: 'MULTI_SELECT', options: ['Piscina', 'Academia', 'Garagem', 'Jardim', 'Portaria 24h', 'Sacada', 'Churrasqueira'] },
+  { key: 'property_type', label: 'Tipo de Imóvel', type: 'SELECT', options: ['Apartamento', 'Casa', 'Sobrado', 'Terreno', 'Comercial', 'Cobertura'], required: true, entity: 'PROPERTY' },
+  { key: 'features', label: 'Comodidades', type: 'MULTI_SELECT', options: ['Piscina', 'Academia', 'Garagem', 'Jardim', 'Portaria 24h', 'Sacada', 'Churrasqueira'], entity: 'PROPERTY' },
 ];
 
 export const MOCK_LEAD_CUSTOM_FIELDS: CustomFieldConfig[] = [
-  { key: 'budget', label: 'Orçamento Estimado', type: 'NUMBER', required: false },
-  { key: 'urgency', label: 'Urgência', type: 'SELECT', options: ['Imediata', '3 Meses', '6 Meses', 'Apenas Pesquisando'] }
+  { key: 'budget', label: 'Orçamento Estimado', type: 'NUMBER', required: false, entity: 'LEAD' },
+  { key: 'urgency', label: 'Urgência', type: 'SELECT', options: ['Imediata', '3 Meses', '6 Meses', 'Apenas Pesquisando'], entity: 'LEAD' }
 ];

@@ -18,6 +18,8 @@ import apiKeysRouter from './routes/apikeys';
 import webhooksRouter from './routes/webhooks';
 import checkoutRouter from './routes/checkout';
 import paymentWebhooksRouter from './routes/paymentWebhooks';
+import settingsRouter from './routes/settings';
+import customFieldsRouter from './routes/customFields';
 import swaggerUi from 'swagger-ui-express';
 import fs from 'fs';
 import path from 'path';
@@ -105,6 +107,7 @@ export const createServer = async () => {
   app.use('/users', usersRouter);
   app.use('/tenants', tenantsRouter);
   app.use('/plans', plansRouter);
+  app.use('/settings', settingsRouter);
   app.use('/properties', propertiesRouter);
   app.use('/leads', leadsRouter);
   app.use('/opportunities', opportunitiesRouter);
@@ -112,6 +115,7 @@ export const createServer = async () => {
   app.use('/interactions', interactionsRouter);
   app.use('/visits', visitsRouter);
   app.use('/invoices', invoicesRouter);
+  app.use('/custom-fields', customFieldsRouter);
   app.use('/apikeys', apiKeysRouter);
   app.use('/webhooks', webhooksRouter); // Webhooks não devem ter rate limit (vêm de serviços externos)
   app.use('/webhooks', paymentWebhooksRouter); // /webhooks/payments

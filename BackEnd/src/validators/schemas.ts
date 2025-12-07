@@ -110,3 +110,24 @@ export const webhookSchema = z.object({
   status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
   tenantId: z.string().min(1).optional(),
 });
+
+export const globalSettingsSchema = z.object({
+  platformName: z.string().min(2),
+  defaultCurrency: z.string().min(1),
+  maintenanceMode: z.boolean(),
+  allowSignups: z.boolean(),
+});
+
+export const customFieldEntitySchema = z.enum(['PROPERTY', 'LEAD']);
+
+export const customFieldConfigSchema = z.object({
+  key: z.string().min(1),
+  label: z.string().min(1),
+  type: z.enum(['TEXT', 'NUMBER', 'SELECT', 'MULTI_SELECT', 'BOOLEAN']),
+  options: z.array(z.string()).optional(),
+  required: z.boolean().optional(),
+});
+
+export const customFieldBulkUpsertSchema = z.object({
+  fields: z.array(customFieldConfigSchema).max(50),
+});

@@ -120,6 +120,7 @@ export interface CustomFieldConfig {
   type: CustomFieldType;
   options?: string[]; // For SELECT and MULTI_SELECT
   required?: boolean;
+  entity?: 'PROPERTY' | 'LEAD';
 }
 
 export interface Property {

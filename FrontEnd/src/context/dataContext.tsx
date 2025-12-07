@@ -152,12 +152,20 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         // list tags
         const tgs = await api.listTags();
         if (Array.isArray(tgs)) setTags(tgs as any);
+        try {
+          const propFields = await api.listCustomFields('PROPERTY');
+          if (Array.isArray(propFields)) setPropertyCustomFields(propFields as any);
+          const leadFields = await api.listCustomFields('LEAD');
+          if (Array.isArray(leadFields)) setLeadCustomFields(leadFields as any);
+        } catch (fieldErr) {
+          console.warn('Failed to fetch custom fields, keeping local state', fieldErr);
+        }
       } catch (err) {
         // keep local mocks if backend calls fail
         console.warn('Backend fetch failed, continuing with local state', err);
       }
     })();
-  }, [token, activeTenantId]);
+  }, [token, activeTenantId, user?.tenantId]);
 
   useEffect(() => {
     if (!token) return;
@@ -188,11 +196,15 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         if (Array.isArray(tnts)) setTenants(tnts as any);
         const pls = await api.listPlans();
         if (Array.isArray(pls)) setPlans(pls as any);
+        if (!user?.tenantId) {
+          const settings = await api.getGlobalSettings();
+          if (settings) setGlobalSettings(settings as any);
+        }
       } catch (err) {
         console.warn('Failed to fetch global SaaS data, using local state', err);
       }
     })();
-  }, [token]);
+  }, [token, user?.tenantId]);
 
   // Filtered data based on current tenant
   const team = allTeam.filter(t => t.tenantId === currentTenant.id);
@@ -282,7 +294,31 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     })();
   };
 
-  const updateGlobalSettings = (settings: GlobalSettings) => setGlobalSettings(settings);
+  const updateGlobalSettings = (settings: GlobalSettings) => {
+    const previous = globalSettings;
+    setGlobalSettings(settings);
+    const tokenLocal = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
+    if (!tokenLocal) {
+      console.warn('[DataContext] updateGlobalSettings: no auth token found — skipping remote update');
+      setGlobalSettings(previous);
+      return;
+    }
+    if (user?.tenantId) {
+      console.warn('[DataContext] updateGlobalSettings: tenant admins não podem atualizar configurações globais');
+      setGlobalSettings(previous);
+      return;
+    }
+    (async () => {
+      try {
+        const { api } = await import('../services/api');
+        const updated = await api.updateGlobalSettings(settings);
+        if (updated) setGlobalSettings(updated as any);
+      } catch (err) {
+        console.error('Failed to update global settings remote, reverting:', err);
+        setGlobalSettings(previous);
+      }
+    })();
+  };
 
   const addPlan = (plan: Omit<SubscriptionPlan, 'id'>) => setPlans(p => [...p, { ...plan, id: `plan_${Date.now()}` }]);
   const updatePlan = (plan: SubscriptionPlan) => setPlans(p => p.map(pl => pl.id === plan.id ? plan : pl));
@@ -594,8 +630,47 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     })();
   };
 
-  const updatePropertyCustomFields = (fields: CustomFieldConfig[]) => setPropertyCustomFields(fields);
-  const updateLeadCustomFields = (fields: CustomFieldConfig[]) => setLeadCustomFields(fields);
+  const updatePropertyCustomFields = (fields: CustomFieldConfig[]) => {
+    const normalized = fields.map(field => ({ ...field, entity: 'PROPERTY' as const, options: field.options ?? [] }));
+    const previous = propertyCustomFields;
+    setPropertyCustomFields(normalized);
+    const tokenLocal = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
+    if (!tokenLocal) {
+      console.warn('[DataContext] updatePropertyCustomFields: no auth token found — skipping remote update');
+      return;
+    }
+    (async () => {
+      try {
+        const { api } = await import('../services/api');
+        const saved = await api.saveCustomFields('PROPERTY', normalized);
+        if (Array.isArray(saved)) setPropertyCustomFields(saved as any);
+      } catch (err) {
+        console.error('Failed to update property custom fields remote, reverting:', err);
+        setPropertyCustomFields(previous);
+      }
+    })();
+  };
+
+  const updateLeadCustomFields = (fields: CustomFieldConfig[]) => {
+    const normalized = fields.map(field => ({ ...field, entity: 'LEAD' as const, options: field.options ?? [] }));
+    const previous = leadCustomFields;
+    setLeadCustomFields(normalized);
+    const tokenLocal = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
+    if (!tokenLocal) {
+      console.warn('[DataContext] updateLeadCustomFields: no auth token found — skipping remote update');
+      return;
+    }
+    (async () => {
+      try {
+        const { api } = await import('../services/api');
+        const saved = await api.saveCustomFields('LEAD', normalized);
+        if (Array.isArray(saved)) setLeadCustomFields(saved as any);
+      } catch (err) {
+        console.error('Failed to update lead custom fields remote, reverting:', err);
+        setLeadCustomFields(previous);
+      }
+    })();
+  };
 
   const addApiKey = (keyData: Omit<ApiKey, 'id' | 'prefix' | 'token' | 'lastUsed' | 'createdAt'>): ApiKey => {
     const token = `ap_live_${Math.random().toString(36).substring(2, 22)}`;

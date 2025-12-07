@@ -67,6 +67,11 @@ enum CustomFieldType {
   BOOLEAN
 }
 
+enum CustomFieldEntity {
+  PROPERTY
+  LEAD
+}
+
 // GLOBAL (SAAS LEVEL)
 model GlobalSettings {
   id              String   @id @default(cuid())
@@ -172,6 +177,7 @@ model CustomFieldConfig {
   // Use a non-optional list with a default empty array so the field can be empty.
   options  String[] @default([])
   required Boolean @default(false)
+  entity   CustomFieldEntity @default(PROPERTY)
   tenantId String?
   tenant   Tenant? @relation(fields: [tenantId], references: [id])
 }
