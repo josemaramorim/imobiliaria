@@ -8,10 +8,19 @@ import { t } from '../i18n';
 
 const router = Router();
 
-router.get('/', requireAuth, identifyTenant, requireTenant, async (req: any, res: any) => {
+router.get('/', requireAuth, identifyTenant, requireTenant, async (_req: any, res: any) => {
   const tenantId = res.locals.tenantId;
-  const items = await prisma.opportunity.findMany({ where: { tenantId } });
-  return res.json({ opportunities: items });
+  const items = await prisma.opportunity.findMany({
+    where: { tenantId },
+    include: { opportunityTags: { include: { tag: true } } }
+  });
+
+  const opportunities = items.map((opp: any) => ({
+    ...opp,
+    tags: opp.opportunityTags.map((ot: any) => ot.tag)
+  }));
+
+  return res.json({ opportunities });
 });
 
 router.post('/', requireAuth, identifyTenant, requireTenant, async (req: any, res: any) => {
@@ -19,22 +28,35 @@ router.post('/', requireAuth, identifyTenant, requireTenant, async (req: any, re
   if (!parsed.success) return res.status(400).json({ error: 'validation', details: parsed.error.format() });
   try {
     const { tags, ...data } = parsed.data as any;
-    const opp = await prisma.opportunity.create({ data: { ...data, tenantId: res.locals.tenantId } });
+    const tenantId = res.locals.tenantId;
+    const opp = await prisma.opportunity.create({ data: { ...data, tenantId } });
 
     if (tags && tags.length > 0) {
+      const tagIds: string[] = [];
       for (const tag of tags) {
-        const existing = await prisma.tag.findFirst({ where: { label: tag.label, tenantId: data.tenantId } });
+        const existing = await prisma.tag.findFirst({ where: { label: tag.label, tenantId } });
         let tagId = existing?.id;
         if (!tagId) {
-          const created = await prisma.tag.create({ data: { label: tag.label, color: tag.color, tenantId: data.tenantId } });
+          const created = await prisma.tag.create({ data: { label: tag.label, color: tag.color || '#3B82F6', tenantId } });
           tagId = created.id;
         }
-        await prisma.opportunity.update({ where: { id: opp.id }, data: { tags: { connect: { id: tagId } } } });
+        if (tagId) tagIds.push(tagId);
+      }
+
+      if (tagIds.length > 0) {
+        await prisma.opportunityTag.createMany({
+          data: tagIds.map((tagId) => ({ opportunityId: opp.id, tagId })),
+          skipDuplicates: true,
+        });
       }
     }
 
-    const result = await prisma.opportunity.findUnique({ where: { id: opp.id }, include: { tags: true } });
-    return res.status(201).json({ message: t(req, 'opportunity.created'), opportunity: result });
+    const result = await prisma.opportunity.findUnique({
+      where: { id: opp.id },
+      include: { opportunityTags: { include: { tag: true } } }
+    });
+    const opportunityWithTags = result ? { ...result, tags: result.opportunityTags.map((ot: any) => ot.tag) } : null;
+    return res.status(201).json({ message: t(req, 'opportunity.created'), opportunity: opportunityWithTags });
   } catch (err: any) {
     console.error('create opportunity err', err);
     return res.status(500).json({ error: 'server_error', message: err.message });

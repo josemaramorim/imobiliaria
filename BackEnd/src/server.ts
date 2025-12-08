@@ -7,6 +7,7 @@ import authRouter from './routes/auth';
 // usersRouter already imported above
 import tenantsRouter from './routes/tenants';
 import plansRouter from './routes/plans';
+import paymentGatewaysRouter from './routes/paymentGateways';
 import propertiesRouter from './routes/properties';
 import leadsRouter from './routes/leads';
 import opportunitiesRouter from './routes/opportunities';
@@ -107,11 +108,13 @@ export const createServer = async () => {
   app.use('/users', usersRouter);
   app.use('/tenants', tenantsRouter);
   app.use('/plans', plansRouter);
+  app.use('/payment-gateways', paymentGatewaysRouter);
   app.use('/settings', settingsRouter);
   app.use('/properties', propertiesRouter);
   app.use('/leads', leadsRouter);
   app.use('/opportunities', opportunitiesRouter);
-  app.use('/tags', tagsRouter);
+  console.log('📌 [SERVER] Registrando rota /tags');
+  app.use('/tags', tagsRouter); 
   app.use('/interactions', interactionsRouter);
   app.use('/visits', visitsRouter);
   app.use('/invoices', invoicesRouter);

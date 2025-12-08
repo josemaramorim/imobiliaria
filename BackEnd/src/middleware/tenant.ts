@@ -24,6 +24,14 @@ export async function identifyTenant(req: Request, res: Response, next: NextFunc
 
   let tenantId = header || query || body;
 
+  // Normaliza casos em que o valor veio serializado com aspas (ex: "tenantId")
+  if (tenantId && typeof tenantId === 'string' && tenantId.length > 1) {
+    const trimmed = tenantId.trim();
+    if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith('\'') && trimmed.endsWith('\''))) {
+      tenantId = trimmed.slice(1, -1);
+    }
+  }
+
   // if not provided, try to find from user id (if present in header by middleware/auth)
   // auth middleware sets req.user.sub
   const anyReq = req as any;

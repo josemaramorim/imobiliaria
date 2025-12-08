@@ -71,6 +71,248 @@ const PaymentGatewayConfigModal = ({ isOpen, onClose, gateway, onSave }: { isOpe
     );
 };
 
+const PaymentGatewayFormModal = ({ isOpen, onClose, onSave, initialData }: { isOpen: boolean, onClose: () => void, onSave: (gateway: Omit<PaymentGateway, 'status' | 'config'>, isEdit: boolean) => void, initialData?: PaymentGateway | null }) => {
+    const { t } = useLanguage();
+    const isEditMode = !!initialData;
+    const [formData, setFormData] = useState({
+        id: '',
+        name: '',
+        logo: '',
+        themeColor: '#000000',
+        configFields: [{ key: '', label: '' }]
+    });
+
+    useEffect(() => {
+        if (isOpen) {
+            if (initialData) {
+                console.log('📝 [PaymentGatewayFormModal] Dados recebidos:', initialData);
+                console.log('📝 [PaymentGatewayFormModal] configFields tipo:', typeof initialData.configFields);
+                console.log('📝 [PaymentGatewayFormModal] configFields é array?', Array.isArray(initialData.configFields));
+                console.log('📝 [PaymentGatewayFormModal] configFields valor:', JSON.stringify(initialData.configFields));
+                
+                // Garantir que configFields seja sempre um array
+                let configFields: { key: string; label: string; }[];
+                
+                if (Array.isArray(initialData.configFields)) {
+                    configFields = initialData.configFields.length > 0 ? initialData.configFields : [{ key: '', label: '' }];
+                } else if (initialData.configFields && typeof initialData.configFields === 'object') {
+                    // Se for um objeto, tentar converter para array
+                    configFields = Object.values(initialData.configFields);
+                } else {
+                    configFields = [{ key: '', label: '' }];
+                }
+                
+                console.log('📝 [PaymentGatewayFormModal] configFields normalizado:', configFields);
+                
+                setFormData({
+                    id: initialData.id,
+                    name: initialData.name,
+                    logo: initialData.logo,
+                    themeColor: initialData.themeColor || '#000000',
+                    configFields
+                });
+            } else {
+                setFormData({
+                    id: '',
+                    name: '',
+                    logo: '',
+                    themeColor: '#000000',
+                    configFields: [{ key: '', label: '' }]
+                });
+            }
+        }
+    }, [isOpen, initialData]);
+
+    if (!isOpen) return null;
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        const validConfigFields = formData.configFields.filter(f => f.key && f.label);
+        onSave({
+            ...formData,
+            configFields: validConfigFields
+        }, isEditMode);
+        onClose();
+    };
+
+    const addConfigField = () => {
+        setFormData(prev => ({
+            ...prev,
+            configFields: [...prev.configFields, { key: '', label: '' }]
+        }));
+    };
+
+    const removeConfigField = (index: number) => {
+        setFormData(prev => ({
+            ...prev,
+            configFields: prev.configFields.filter((_, i) => i !== index)
+        }));
+    };
+
+    const updateConfigField = (index: number, field: 'key' | 'label', value: string) => {
+        setFormData(prev => ({
+            ...prev,
+            configFields: prev.configFields.map((f, i) => 
+                i === index ? { ...f, [field]: value } : f
+            )
+        }));
+    };
+
+    return (
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                <div className="p-6 border-b sticky top-0 bg-white">
+                    <h2 className="text-xl font-bold">{isEditMode ? 'Editar Gateway de Pagamento' : 'Adicionar Novo Gateway de Pagamento'}</h2>
+                </div>
+                <form onSubmit={handleSubmit}>
+                    <div className="p-6 space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-sm font-medium text-gray-700">ID * <span className="text-xs text-gray-500">(ex: mercadopago)</span></label>
+                                <input
+                                    type="text"
+                                    value={formData.id}
+                                    onChange={e => setFormData(prev => ({ ...prev, id: e.target.value.toLowerCase().replace(/\s/g, '') }))}
+                                    className="w-full mt-1 h-10 px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                                    required
+                                    pattern="[a-z0-9-]+"
+                                    placeholder="mercadopago"
+                                    disabled={isEditMode}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium text-gray-700">Nome * <span className="text-xs text-gray-500">(ex: Mercado Pago)</span></label>
+                                <input
+                                    type="text"
+                                    value={formData.name}
+                                    onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                                    className="w-full mt-1 h-10 px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                                    required
+                                    placeholder="Mercado Pago"
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-gray-700">URL do Logo * <span className="text-xs text-gray-500">(PNG/SVG transparente)</span></label>
+                            <input
+                                type="url"
+                                value={formData.logo}
+                                onChange={e => setFormData(prev => ({ ...prev, logo: e.target.value }))}
+                                className="w-full mt-1 h-10 px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                                required
+                                placeholder="https://..."
+                            />
+                            {formData.logo && (
+                                <div className="mt-2 p-2 bg-gray-50 rounded border flex items-center gap-2">
+                                    <span className="text-xs text-gray-500">Preview:</span>
+                                    <img src={formData.logo} alt="Preview" className="h-8 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                </div>
+                            )}
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-gray-700">Cor do Tema</label>
+                            <div className="flex items-center gap-3 mt-1">
+                                <input
+                                    type="color"
+                                    value={formData.themeColor}
+                                    onChange={e => setFormData(prev => ({ ...prev, themeColor: e.target.value }))}
+                                    className="h-10 w-20 rounded border border-gray-300 cursor-pointer"
+                                />
+                                <input
+                                    type="text"
+                                    value={formData.themeColor}
+                                    onChange={e => setFormData(prev => ({ ...prev, themeColor: e.target.value }))}
+                                    className="flex-1 h-10 px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                                    placeholder="#000000"
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <div className="flex justify-between items-center mb-2">
+                                <label className="text-sm font-medium text-gray-700">Campos de Configuração</label>
+                                <button type="button" onClick={addConfigField} className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1">
+                                    <Plus className="w-3 h-3" /> Adicionar Campo
+                                </button>
+                            </div>
+                            <div className="space-y-2">
+                                {formData.configFields.map((field, index) => (
+                                    <div key={index} className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            value={field.key}
+                                            onChange={e => updateConfigField(index, 'key', e.target.value)}
+                                            className="flex-1 h-10 px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                                            placeholder="Chave (ex: apiKey)"
+                                        />
+                                        <input
+                                            type="text"
+                                            value={field.label}
+                                            onChange={e => updateConfigField(index, 'label', e.target.value)}
+                                            className="flex-1 h-10 px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                                            placeholder="Label (ex: API Key)"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => removeConfigField(index)}
+                                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="p-4 bg-gray-50 flex justify-end gap-3 sticky bottom-0">
+                        <button type="button" onClick={onClose} className="px-4 py-2 border rounded-lg hover:bg-gray-100">{t('common.cancel')}</button>
+                        <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">{isEditMode ? 'Salvar Alterações' : 'Criar Gateway'}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+const DeletePaymentGatewayModal = ({ isOpen, onClose, onConfirm, gateway, error }: { isOpen: boolean, onClose: () => void, onConfirm: () => void, gateway: PaymentGateway | null, error?: string }) => {
+    const { t } = useLanguage();
+    const [isDeleting, setIsDeleting] = useState(false);
+    
+    useEffect(() => { 
+        if (isOpen) setIsDeleting(false);
+    }, [isOpen]);
+    
+    const handleConfirm = async () => {
+        setIsDeleting(true);
+        await onConfirm();
+        setIsDeleting(false);
+    };
+
+    if (!isOpen || !gateway) return null;
+    
+    return (
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+                <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4">
+                    <AlertTriangle className="w-6 h-6 text-red-600" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 text-center mb-2">Excluir Gateway de Pagamento</h3>
+                <p className="text-sm text-gray-500 text-center mb-4">
+                    Tem certeza que deseja excluir <strong className="text-gray-700">{gateway.name}</strong>?
+                    {error && <span className="block mt-2 text-red-600 font-medium">{error}</span>}
+                </p>
+                <div className="flex gap-3">
+                    <button onClick={onClose} disabled={isDeleting} className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 disabled:opacity-50">
+                        {t('common.cancel')}
+                    </button>
+                    <button onClick={handleConfirm} disabled={isDeleting} className="flex-1 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 disabled:opacity-75">
+                        {isDeleting ? 'Excluindo...' : 'Excluir'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const SwitchConfirmationModal = ({ isOpen, onClose, onConfirm, tenantName }: { isOpen: boolean, onClose: () => void, onConfirm: () => void, tenantName: string }) => {
     const { t } = useLanguage();
     const [isLoading, setIsLoading] = useState(false);
@@ -240,7 +482,14 @@ const PlanFormModal = ({ isOpen, onClose, onSubmit, initialData }: { isOpen: boo
 const TenantFormModal = ({ isOpen, onClose, onSubmit, plans, paymentGateways, initialData }: { isOpen: boolean, onClose: () => void, onSubmit: (data: Partial<Tenant & { trialDuration: number }>) => void, plans: SubscriptionPlan[], paymentGateways: PaymentGateway[], initialData?: Tenant }) => {
     const { t } = useLanguage();
     const [formData, setFormData] = useState({ name: '', domain: '', planId: '', themeColor: '#4f46e5', trialDuration: 14, paymentGatewayId: 'stripe' as PaymentGatewayId });
+    const [gatewaySearchTerm, setGatewaySearchTerm] = useState('');
+    const [isGatewayDropdownOpen, setIsGatewayDropdownOpen] = useState(false);
+    const gatewayDropdownRef = useRef<HTMLDivElement>(null);
     const availableGateways = paymentGateways.filter(pg => pg.status === 'ACTIVE' || (initialData && initialData.paymentGatewayId === pg.id));
+    
+    const filteredGateways = availableGateways.filter(gw =>
+        gw.name.toLowerCase().includes(gatewaySearchTerm.toLowerCase())
+    );
 
     useEffect(() => {
         if (isOpen) {
@@ -249,8 +498,19 @@ const TenantFormModal = ({ isOpen, onClose, onSubmit, plans, paymentGateways, in
             } else {
                 setFormData({ name: '', domain: '', planId: plans[0]?.id || '', themeColor: '#4f46e5', trialDuration: 14, paymentGatewayId: availableGateways[0]?.id || 'stripe' });
             }
+            setGatewaySearchTerm('');
         }
     }, [isOpen, initialData, plans, paymentGateways]);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (gatewayDropdownRef.current && !gatewayDropdownRef.current.contains(event.target as Node)) {
+                setIsGatewayDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     if (!isOpen) return null;
 
@@ -291,9 +551,66 @@ const TenantFormModal = ({ isOpen, onClose, onSubmit, plans, paymentGateways, in
                         </div>
                         <div>
                             <label className="text-sm font-medium">{t('saas.form.payment_gateway')}</label>
-                            <select value={formData.paymentGatewayId} onChange={e => setFormData({ ...formData, paymentGatewayId: e.target.value as PaymentGatewayId })} className="mt-1 w-full h-10 px-3 border rounded-lg" required>
-                                {availableGateways.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                            </select>
+                            <div className="relative mt-1" ref={gatewayDropdownRef}>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsGatewayDropdownOpen(!isGatewayDropdownOpen)}
+                                    className="w-full h-10 px-3 border rounded-lg text-left flex items-center justify-between bg-white hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                >
+                                    <span className={formData.paymentGatewayId ? 'text-gray-900' : 'text-gray-400'}>
+                                        {formData.paymentGatewayId 
+                                            ? paymentGateways.find(gw => gw.id === formData.paymentGatewayId)?.name || 'Selecione...'
+                                            : 'Selecione um gateway...'}
+                                    </span>
+                                    <Search className="w-4 h-4 text-gray-400" />
+                                </button>
+                                
+                                {isGatewayDropdownOpen && (
+                                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-hidden">
+                                        <div className="p-2 border-b border-gray-200">
+                                            <div className="relative">
+                                                <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                                                <input
+                                                    type="text"
+                                                    className="w-full h-9 pl-9 pr-3 text-sm bg-gray-50 border border-gray-200 rounded-md focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                                                    placeholder="Buscar gateway..."
+                                                    value={gatewaySearchTerm}
+                                                    onChange={(e) => setGatewaySearchTerm(e.target.value)}
+                                                    autoFocus
+                                                />
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="py-1 overflow-y-auto max-h-48">
+                                            {filteredGateways.length > 0 ? (
+                                                filteredGateways.map((gw) => (
+                                                    <div
+                                                        key={gw.id}
+                                                        className={`px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 flex items-center justify-between ${formData.paymentGatewayId === gw.id ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700'}`}
+                                                        onClick={() => {
+                                                            setFormData({ ...formData, paymentGatewayId: gw.id });
+                                                            setIsGatewayDropdownOpen(false);
+                                                            setGatewaySearchTerm('');
+                                                        }}
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            <CreditCard className="w-4 h-4" />
+                                                            <span>{gw.name}</span>
+                                                        </div>
+                                                        {formData.paymentGatewayId === gw.id && <Check className="w-4 h-4" />}
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <div className="px-3 py-2 text-sm text-gray-500 text-center">
+                                                    {availableGateways.length === 0 
+                                                        ? 'Nenhum gateway ativo disponível'
+                                                        : 'Nenhum gateway encontrado'}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                         {!initialData && (
                             <div>
@@ -336,7 +653,7 @@ const SaaSAdmin = () => {
     const {
         tenants, switchTenant, addTenant, updateTenant, deleteTenant,
         plans, addPlan, updatePlan, deletePlan,
-        paymentGateways, togglePaymentGatewayStatus, updatePaymentGatewayConfig,
+        paymentGateways, createPaymentGateway, updatePaymentGateway, deletePaymentGateway, togglePaymentGatewayStatus, updatePaymentGatewayConfig,
         allInvoices, markInvoiceAsPaid,
         globalSettings, updateGlobalSettings
     } = useData();
@@ -359,6 +676,10 @@ const SaaSAdmin = () => {
     const [localGlobalSettings, setLocalGlobalSettings] = useState(globalSettings);
     const [settingsSaved, setSettingsSaved] = useState(false);
     const [configuringGateway, setConfiguringGateway] = useState<PaymentGateway | null>(null);
+    const [isGatewayModalOpen, setIsGatewayModalOpen] = useState(false);
+    const [editingGateway, setEditingGateway] = useState<PaymentGateway | null>(null);
+    const [gatewayToDelete, setGatewayToDelete] = useState<PaymentGateway | null>(null);
+    const [deleteGatewayError, setDeleteGatewayError] = useState<string>('');
 
     // Active Dropdown state
     const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
@@ -448,6 +769,38 @@ const SaaSAdmin = () => {
     const handleTenantStatusToggle = (tenant: Tenant) => {
         const newStatus = tenant.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
         updateTenant({ ...tenant, status: newStatus });
+    };
+
+    const openGatewayModal = (gateway?: PaymentGateway) => {
+        setEditingGateway(gateway || null);
+        setIsGatewayModalOpen(true);
+    };
+
+    const handleGatewaySubmit = (gateway: Omit<PaymentGateway, 'status' | 'config'>, isEdit: boolean) => {
+        if (isEdit && editingGateway) {
+            updatePaymentGateway(editingGateway.id, {
+                name: gateway.name,
+                logo: gateway.logo,
+                themeColor: gateway.themeColor,
+                configFields: gateway.configFields
+            });
+        } else {
+            createPaymentGateway(gateway);
+        }
+        setIsGatewayModalOpen(false);
+        setEditingGateway(null);
+    };
+
+    const handleDeleteGateway = async () => {
+        if (!gatewayToDelete) return;
+        
+        try {
+            setDeleteGatewayError('');
+            await deletePaymentGateway(gatewayToDelete.id);
+            setGatewayToDelete(null);
+        } catch (err: any) {
+            setDeleteGatewayError(err.message || 'Erro ao excluir gateway');
+        }
     };
 
     return (
@@ -617,7 +970,12 @@ const SaaSAdmin = () => {
                         </div>
                     </div>
                     <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                        <h3 className="text-lg font-bold">Meios de Pagamento</h3>
+                        <div className="flex justify-between items-center mb-1">
+                            <h3 className="text-lg font-bold">Meios de Pagamento</h3>
+                            <button onClick={() => openGatewayModal()} className="px-3 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-lg flex items-center gap-2 hover:bg-indigo-700">
+                                <Plus className="w-4 h-4" /> Adicionar Gateway
+                            </button>
+                        </div>
                         <p className="text-sm text-gray-500 mt-1">Gerencie os gateways de pagamento disponíveis na plataforma.</p>
                         <div className="mt-4 space-y-3">
                             {paymentGateways.map(gw => {
@@ -631,6 +989,12 @@ const SaaSAdmin = () => {
                                         </div>
                                         <div className='flex items-center gap-2'>
                                             <button onClick={() => setConfiguringGateway(gw)} className='text-xs font-medium text-indigo-600 hover:text-indigo-800'>{t('saas.gateways.configure')}</button>
+                                            <button onClick={() => openGatewayModal(gw)} className='p-2 text-gray-500 hover:bg-gray-200 rounded-full' title='Editar gateway'>
+                                                <Edit2 className='w-4 h-4' />
+                                            </button>
+                                            <button onClick={() => { setDeleteGatewayError(''); setGatewayToDelete(gw); }} className='p-2 text-gray-500 hover:bg-red-50 hover:text-red-600 rounded-full' title='Excluir gateway'>
+                                                <Trash2 className='w-4 h-4' />
+                                            </button>
                                             <div className="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
                                                 <input type="checkbox" checked={gw.status === 'ACTIVE'} onChange={() => togglePaymentGatewayStatus(gw.id)} className="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer" />
                                                 <label className="toggle-label block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer"></label>
@@ -698,6 +1062,27 @@ const SaaSAdmin = () => {
                 onClose={() => setConfiguringGateway(null)}
                 gateway={configuringGateway}
                 onSave={updatePaymentGatewayConfig}
+            />
+
+            <PaymentGatewayFormModal
+                isOpen={isGatewayModalOpen}
+                onClose={() => {
+                    setIsGatewayModalOpen(false);
+                    setEditingGateway(null);
+                }}
+                onSave={handleGatewaySubmit}
+                initialData={editingGateway}
+            />
+
+            <DeletePaymentGatewayModal
+                isOpen={!!gatewayToDelete}
+                onClose={() => {
+                    setGatewayToDelete(null);
+                    setDeleteGatewayError('');
+                }}
+                onConfirm={handleDeleteGateway}
+                gateway={gatewayToDelete}
+                error={deleteGatewayError}
             />
 
         </div>

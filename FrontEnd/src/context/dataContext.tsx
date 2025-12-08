@@ -17,6 +17,9 @@ interface DataContextType {
   deletePlan: (planId: string) => void;
 
   paymentGateways: PaymentGateway[];
+  createPaymentGateway: (gateway: Omit<PaymentGateway, 'status' | 'config'>) => void;
+  updatePaymentGateway: (id: PaymentGatewayId, gateway: Partial<Omit<PaymentGateway, 'id' | 'status' | 'config'>>) => void;
+  deletePaymentGateway: (id: PaymentGatewayId) => Promise<void>;
   togglePaymentGatewayStatus: (id: PaymentGatewayId) => void;
   updatePaymentGatewayConfig: (id: PaymentGatewayId, config: Record<string, string>) => void;
 
@@ -227,6 +230,8 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         }
         const pls = await api.listPlans();
         if (Array.isArray(pls)) setPlans(pls as any);
+        const gateways = await api.listPaymentGateways();
+        if (Array.isArray(gateways)) setPaymentGateways(gateways as any);
         if (!user?.tenantId) {
           const settings = await api.getGlobalSettings();
           if (settings) setGlobalSettings(settings as any);
@@ -361,17 +366,117 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     setAllInvoices(p => p.map(inv => inv.id === invoiceId ? { ...inv, status: 'PAID', paidDate: new Date().toISOString() } : inv));
   };
 
-  const togglePaymentGatewayStatus = (id: PaymentGatewayId) => {
+  const createPaymentGateway = (gateway: Omit<PaymentGateway, 'status' | 'config'>) => {
+    const newGateway: PaymentGateway = {
+      ...gateway,
+      status: 'INACTIVE',
+      config: {}
+    };
+    setPaymentGateways(prev => [...prev, newGateway]);
+    
+    // Persist to backend
+    (async () => {
+      try {
+        const { api } = await import('../services/api');
+        await api.createPaymentGateway({
+          id: gateway.id,
+          name: gateway.name,
+          logo: gateway.logo,
+          themeColor: gateway.themeColor,
+          configFields: gateway.configFields
+        });
+      } catch (err) {
+        console.error('Failed to create payment gateway:', err);
+        // Revert on error
+        setPaymentGateways(prev => prev.filter(gw => gw.id !== gateway.id));
+      }
+    })();
+  };
+
+  const updatePaymentGateway = (id: PaymentGatewayId, updates: Partial<Omit<PaymentGateway, 'id' | 'status' | 'config'>>) => {
+    const oldGateway = paymentGateways.find(gw => gw.id === id);
+    if (!oldGateway) return;
+    
     setPaymentGateways(prev =>
       prev.map(gw =>
         gw.id === id
-          ? { ...gw, status: gw.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' }
+          ? { ...gw, ...updates }
           : gw
       )
     );
+    
+    // Persist to backend
+    (async () => {
+      try {
+        const { api } = await import('../services/api');
+        await api.updatePaymentGateway(id, updates);
+      } catch (err) {
+        console.error('Failed to update payment gateway:', err);
+        // Revert on error
+        setPaymentGateways(prev =>
+          prev.map(gw =>
+            gw.id === id ? oldGateway : gw
+          )
+        );
+      }
+    })();
+  };
+
+  const deletePaymentGateway = async (id: PaymentGatewayId) => {
+    const gateway = paymentGateways.find(gw => gw.id === id);
+    if (!gateway) return;
+    
+    // Remover imediatamente da UI
+    setPaymentGateways(prev => prev.filter(gw => gw.id !== id));
+    
+    try {
+      const { api } = await import('../services/api');
+      await api.deletePaymentGateway(id);
+    } catch (err: any) {
+      console.error('Failed to delete payment gateway:', err);
+      // Revert on error
+      setPaymentGateways(prev => [...prev, gateway]);
+      // Re-throw para mostrar erro no modal
+      throw new Error(err.response?.data?.error || 'Erro ao excluir gateway');
+    }
+  };
+
+  const togglePaymentGatewayStatus = (id: PaymentGatewayId) => {
+    const gateway = paymentGateways.find(gw => gw.id === id);
+    if (!gateway) return;
+    
+    const newStatus = gateway.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    setPaymentGateways(prev =>
+      prev.map(gw =>
+        gw.id === id
+          ? { ...gw, status: newStatus }
+          : gw
+      )
+    );
+    
+    // Persist to backend
+    (async () => {
+      try {
+        const { api } = await import('../services/api');
+        await api.updatePaymentGateway(id, { status: newStatus });
+      } catch (err: any) {
+        console.error('Failed to update payment gateway status:', err);
+        // Revert on error
+        setPaymentGateways(prev =>
+          prev.map(gw =>
+            gw.id === id
+              ? { ...gw, status: gateway.status }
+              : gw
+          )
+        );
+        alert(`Erro ao atualizar status do gateway: ${err?.response?.data?.message || err?.message || 'Erro desconhecido'}`);
+      }
+    })();
   };
 
   const updatePaymentGatewayConfig = (id: PaymentGatewayId, config: Record<string, string>) => {
+    const gateway = paymentGateways.find(gw => gw.id === id);
+    const previousConfig = gateway?.config;
     setPaymentGateways(prev =>
       prev.map(gw =>
         gw.id === id
@@ -379,10 +484,30 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
           : gw
       )
     );
+    
+    // Persist to backend
+    (async () => {
+      try {
+        const { api } = await import('../services/api');
+        await api.updatePaymentGateway(id, { config });
+      } catch (err: any) {
+        console.error('Failed to update payment gateway config:', err);
+        // Rollback
+        setPaymentGateways(prev =>
+          prev.map(gw =>
+            gw.id === id
+              ? { ...gw, config: previousConfig }
+              : gw
+          )
+        );
+        alert(`Erro ao atualizar configuração do gateway: ${err?.response?.data?.message || err?.message || 'Erro desconhecido'}`);
+      }
+    })();
   };
 
   // --- Tenant Data CRUD ---
   const addVisit = (visit: Visit) => {
+    const previous = visits;
     setVisits(p => [...p, visit]);
     const token = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
     if (!token) return;
@@ -391,13 +516,16 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         const { api } = await import('../services/api');
         const created = await api.createVisit(visit);
         setVisits(prev => prev.map(item => item.id === visit.id ? created : item));
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to create visit remote:', err);
+        setVisits(previous); // Rollback
+        alert(`Erro ao criar visita: ${err?.response?.data?.message || err?.message || 'Erro desconhecido'}`);
       }
     })();
   };
 
   const updateVisit = (visit: Visit) => {
+    const previous = visits;
     setVisits(p => p.map(v => v.id === visit.id ? visit : v));
     const token = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
     if (!token) return;
@@ -406,8 +534,10 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         const { api } = await import('../services/api');
         const updated = await api.updateVisit(visit.id, visit);
         setVisits(prev => prev.map(item => item.id === visit.id ? updated : item));
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to update visit remote:', err);
+        setVisits(previous); // Rollback
+        alert(`Erro ao atualizar visita: ${err?.response?.data?.message || err?.message || 'Erro desconhecido'}`);
       }
     })();
   };
@@ -421,14 +551,16 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
       try {
         const { api } = await import('../services/api');
         await api.deleteVisit(id);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to delete visit remote, reverting:', err);
         setVisits(previous);
+        alert(`Erro ao deletar visita: ${err?.response?.data?.message || err?.message || 'Erro desconhecido'}`);
       }
     })();
   };
 
   const addLead = (lead: Lead) => {
+    const previous = leads;
     setLeads(p => [{ ...lead, tenantId: currentTenant.id }, ...p]);
     const token = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
     if (!token) return;
@@ -437,13 +569,16 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         const { api } = await import('../services/api');
         const created = await api.createLead(lead);
         setLeads(prev => prev.map(item => item.id === lead.id ? created : item));
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to create lead remote:', err);
+        setLeads(previous); // Rollback
+        alert(`Erro ao criar lead: ${err?.response?.data?.message || err?.message || 'Erro desconhecido'}`);
       }
     })();
   };
 
   const updateLead = (lead: Lead) => {
+    const previous = leads;
     setLeads(p => p.map(l => l.id === lead.id ? lead : l));
     const token = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
     if (!token) return;
@@ -452,8 +587,10 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         const { api } = await import('../services/api');
         const updated = await api.updateLead(lead.id, lead);
         setLeads(prev => prev.map(item => item.id === lead.id ? updated : item));
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to update lead remote:', err);
+        setLeads(previous); // Rollback
+        alert(`Erro ao atualizar lead: ${err?.response?.data?.message || err?.message || 'Erro desconhecido'}`);
       }
     })();
   };
@@ -467,15 +604,17 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
       try {
         const { api } = await import('../services/api');
         await api.deleteLead(id);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to delete lead remote, reverting:', err);
         setLeads(previous);
+        alert(`Erro ao deletar lead: ${err?.response?.data?.message || err?.message || 'Erro desconhecido'}`);
       }
     })();
   };
 
   const addTag = (tag: Tag) => {
     // optimistic local add
+    const previous = tags;
     setTags(p => [...p, { ...tag, tenantId: currentTenant.id }]);
     const token = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
     if (!token) return;
@@ -486,8 +625,10 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         // refresh list from backend to ensure consistency
         const all = await api.listTags();
         if (Array.isArray(all)) setTags(all as any);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to create tag remote:', err);
+        setTags(previous); // Rollback
+        alert(`Erro ao criar tag: ${err?.response?.data?.message || err?.message || 'Erro desconhecido'}`);
       }
     })();
   };
@@ -502,9 +643,10 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         const { api } = await import('../services/api');
         const updated = await api.updateTag(tag.id, tag);
         setTags(prev => prev.map(t => t.id === tag.id ? updated : t));
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to update tag remote, reverting:', err);
         setTags(previous);
+        alert(`Erro ao atualizar tag: ${err?.response?.data?.message || err?.message || 'Erro desconhecido'}`);
       }
     })();
   };
@@ -518,15 +660,17 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
       try {
         const { api } = await import('../services/api');
         await api.deleteTag(id);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to delete tag remote, reverting:', err);
         setTags(previous);
+        alert(`Erro ao deletar tag: ${err?.response?.data?.message || err?.message || 'Erro desconhecido'}`);
       }
     })();
   };
 
   const addProperty = (prop: Property) => {
     // optimistic add
+    const previous = properties;
     setProperties(p => [{ ...prop, tenantId: currentTenant.id }, ...p]);
     const token = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
     if (!token) return;
@@ -539,14 +683,17 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         if (Array.isArray(allProps)) {
           setProperties(allProps as any);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to create property remote:', err);
+        setProperties(previous); // Rollback
+        alert(`Erro ao criar imóvel: ${err?.response?.data?.message || err?.message || 'Erro desconhecido'}`);
       }
     })();
   };
 
   const updateProperty = (prop: Property) => {
     // optimistic update
+    const previous = properties;
     setProperties(p => p.map(p => p.id === prop.id ? prop : p));
     const token = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
     if (!token) return;
@@ -555,8 +702,10 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         const { api } = await import('../services/api');
         const updated = await api.updateProperty(prop.id, prop);
         setProperties(prev => prev.map(item => item.id === prop.id ? updated : item));
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to update property remote:', err);
+        setProperties(previous); // Rollback
+        alert(`Erro ao atualizar imóvel: ${err?.response?.data?.message || err?.message || 'Erro desconhecido'}`);
       }
     })();
   };
@@ -570,9 +719,10 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
       try {
         const { api } = await import('../services/api');
         await api.deleteProperty(id);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to delete property remote, reverting:', err);
         setProperties(previous);
+        alert(`Erro ao deletar imóvel: ${err?.response?.data?.message || err?.message || 'Erro desconhecido'}`);
       }
     })();
   };
@@ -590,10 +740,11 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
       try {
         const { api } = await import('../services/api');
         await api.createUser(user);
-      } catch (err) {
+      } catch (err: any) {
         // Revert on error
         setAllTeam(p => p.filter(u => u.id !== user.id));
         console.error('Falha ao criar usuário:', err);
+        alert(`Erro ao criar usuário: ${err?.response?.data?.message || err?.message || 'Erro desconhecido'}`);
       }
     })();
   };
@@ -624,10 +775,11 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         if (updated) {
           setAllTeam(prev => prev.map(u => u.id === user.id ? { ...u, ...updated } : u));
         }
-      } catch (err) {
+      } catch (err: any) {
         // Revert on error
         setAllTeam(previous);
         console.error('Falha ao atualizar usuário:', err);
+        alert(`Erro ao atualizar usuário: ${err?.response?.data?.message || err?.message || 'Erro desconhecido'}`);
       }
     })();
   };
@@ -655,10 +807,11 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
             return [...others, ...refreshed];
           });
         }
-      } catch (err) {
+      } catch (err: any) {
         // Revert on error
         setAllTeam(previous);
         console.error('Falha ao deletar usuário:', err);
+        alert(`Erro ao deletar usuário: ${err?.response?.data?.message || err?.message || 'Erro desconhecido'}`);
       }
     })();
   };
@@ -677,9 +830,10 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         const { api } = await import('../services/api');
         const saved = await api.saveCustomFields('PROPERTY', normalized);
         if (Array.isArray(saved)) setPropertyCustomFields(saved as any);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to update property custom fields remote, reverting:', err);
         setPropertyCustomFields(previous);
+        alert(`Erro ao atualizar campos customizados: ${err?.response?.data?.message || err?.message || 'Erro desconhecido'}`);
       }
     })();
   };
@@ -698,9 +852,10 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         const { api } = await import('../services/api');
         const saved = await api.saveCustomFields('LEAD', normalized);
         if (Array.isArray(saved)) setLeadCustomFields(saved as any);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to update lead custom fields remote, reverting:', err);
         setLeadCustomFields(previous);
+        alert(`Erro ao atualizar campos customizados: ${err?.response?.data?.message || err?.message || 'Erro desconhecido'}`);
       }
     })();
   };
@@ -754,7 +909,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     <DataContext.Provider value={{
       tenants, currentTenant, switchTenant, addTenant, updateTenant, deleteTenant,
       plans, addPlan, updatePlan, deletePlan,
-      paymentGateways, togglePaymentGatewayStatus, updatePaymentGatewayConfig,
+      paymentGateways, createPaymentGateway, updatePaymentGateway, deletePaymentGateway, togglePaymentGatewayStatus, updatePaymentGatewayConfig,
       invoices, allInvoices, markInvoiceAsPaid,
       globalSettings, updateGlobalSettings,
       visits, addVisit, updateVisit, deleteVisit,

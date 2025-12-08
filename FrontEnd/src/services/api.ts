@@ -142,6 +142,24 @@ export const api = {
     return resp.data.plans || [];
   },
 
+  // Payment Gateways
+  listPaymentGateways: async () => {
+    const resp = await client.get('/payment-gateways');
+    return resp.data.paymentGateways || [];
+  },
+  createPaymentGateway: async (payload: any) => {
+    const resp = await client.post('/payment-gateways', payload);
+    return resp.data.paymentGateway;
+  },
+  updatePaymentGateway: async (id: string, payload: any) => {
+    const resp = await client.put(`/payment-gateways/${id}`, payload);
+    return resp.data.paymentGateway;
+  },
+  deletePaymentGateway: async (id: string) => {
+    const resp = await client.delete(`/payment-gateways/${id}`);
+    return resp.data;
+  },
+
   // Visits
   listVisits: async () => {
     const resp = await client.get('/visits');

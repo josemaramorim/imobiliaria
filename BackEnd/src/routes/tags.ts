@@ -4,14 +4,18 @@ import { requireAuth } from '../middleware/auth';
 import { identifyTenant, requireTenant } from '../middleware/tenant';
 
 const router = Router();
+console.log('🏷️  [TAGS ROUTER] Carregado!');
 
 router.get('/', requireAuth, identifyTenant, requireTenant, async (_req: any, res: any) => {
+  console.log('🏷️  [TAGS] GET / recebido');
+
   const tenantId = res.locals.tenantId;
   const tags = await prisma.tag.findMany({ where: { tenantId }, orderBy: { label: 'asc' } });
   return res.json({ tags });
 });
 
 router.post('/', requireAuth, identifyTenant, requireTenant, async (req: any, res: any) => {
+  console.log('🏷️  [TAGS] POST / recebido, body:', req.body);
   const { label, name, color } = req.body;
   const tagLabel = label || name; // Accept both 'label' and 'name' for compatibility
   if (!tagLabel) {

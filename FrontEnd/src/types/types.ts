@@ -24,7 +24,7 @@ export type Permission =
 
 // --- Billing & SaaS Management ---
 
-export type PaymentGatewayId = 'stripe' | 'pagarme' | 'asaas' | 'pagseguro';
+export type PaymentGatewayId = string; // ID vem do banco de dados (stripe, pagarme, asaas, pagseguro, paypal, etc)
 
 export interface PaymentGateway {
   id: PaymentGatewayId;
