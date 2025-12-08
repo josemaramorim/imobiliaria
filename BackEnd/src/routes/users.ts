@@ -58,8 +58,8 @@ router.post('/', requireAuth, async (req: any, res) => {
       return res.status(404).json({ error: 'user_not_found' });
     }
 
-    // Only ADMIN can create users
-    if (currentUser.role !== 'ADMIN') {
+    // Only ADMIN or SUPER_ADMIN can create users
+    if (!['ADMIN', 'SUPER_ADMIN'].includes(currentUser.role)) {
       return res.status(403).json({ error: 'forbidden' });
     }
 
@@ -124,8 +124,9 @@ router.put('/:id', requireAuth, async (req: any, res) => {
       return res.status(404).json({ error: 'user_not_found' });
     }
 
-    // Only ADMIN can update other users, or user can update themselves
-    if (currentUser.role !== 'ADMIN' && userId !== targetUserId) {
+    // Only ADMIN or SUPER_ADMIN can update other users, or user can update themselves
+    const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(currentUser.role);
+    if (!isAdmin && userId !== targetUserId) {
       return res.status(403).json({ error: 'forbidden' });
     }
 
@@ -156,8 +157,8 @@ router.put('/:id', requireAuth, async (req: any, res) => {
       phone: phone !== undefined ? phone : targetUser.phone,
     };
 
-    // Only ADMIN can change role and status
-    if (currentUser.role === 'ADMIN') {
+    // Only ADMIN or SUPER_ADMIN can change role and status
+    if (isAdmin) {
       if (role) updateData.role = role;
       if (status) updateData.status = status;
     }

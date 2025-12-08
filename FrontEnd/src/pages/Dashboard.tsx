@@ -69,6 +69,16 @@ const Dashboard = () => {
 
   const formattedRevenue = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(totalRevenue);
 
+  if (!currentTenant) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center p-8 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <p className="text-yellow-800">{t('common.loading') || 'Carregando...'}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-end">

@@ -2,8 +2,13 @@ import axios from 'axios';
 
 const BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
 
-const getToken = () => typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
-const getTenant = () => typeof window !== 'undefined' ? JSON.parse(sessionStorage.getItem('apollo_current_tenant') || 'null') : null;
+const getToken = () => {
+  const token = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
+  if (token) console.log('📡 [API] Token encontrado, enviando para requisição');
+  else console.log('📡 [API] ⚠️ Token NÃO encontrado!');
+  return token;
+};
+const getTenant = () => typeof window !== 'undefined' ? sessionStorage.getItem('apollo_current_tenant') : null;
 
 const client = axios.create({ baseURL: BASE, headers: { 'Content-Type': 'application/json' } });
 

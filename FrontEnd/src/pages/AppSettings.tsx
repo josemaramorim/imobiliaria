@@ -545,7 +545,7 @@ const AppSettings = () => {
     } = useData();
 
     const [activeTab, setActiveTab] = useState<'general' | 'billing' | 'api' | 'webhooks'>('general');
-    const [generalForm, setGeneralForm] = useState({ name: currentTenant.name, domain: currentTenant.domain, themeColor: currentTenant.themeColor });
+    const [generalForm, setGeneralForm] = useState({ name: currentTenant?.name || '', domain: currentTenant?.domain || '', themeColor: currentTenant?.themeColor || '' });
     const [generalFormSaved, setGeneralFormSaved] = useState(false);
 
     const [isResetModalOpen, setIsResetModalOpen] = useState(false);
@@ -570,17 +570,20 @@ const AppSettings = () => {
     // Checkout State
     const [invoiceToPay, setInvoiceToPay] = useState<Invoice | null>(null);
 
-    const currentPlan = plans.find(p => p.id === currentTenant.planId);
-    const currentGateway = paymentGateways.find(g => g.id === currentTenant.paymentGatewayId);
+    const currentPlan = currentTenant ? plans.find(p => p.id === currentTenant.planId) : undefined;
+    const currentGateway = currentTenant ? paymentGateways.find(g => g.id === currentTenant.paymentGatewayId) : undefined;
 
-    const daysToRenewal = currentTenant.nextBillingDate ? Math.ceil((new Date(currentTenant.nextBillingDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : (currentTenant.trialEndsAt ? Math.ceil((new Date(currentTenant.trialEndsAt).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : null);
+    const daysToRenewal = currentTenant ? (currentTenant.nextBillingDate ? Math.ceil((new Date(currentTenant.nextBillingDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : (currentTenant.trialEndsAt ? Math.ceil((new Date(currentTenant.trialEndsAt).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : null)) : null;
 
     useEffect(() => {
-        setGeneralForm({ name: currentTenant.name, domain: currentTenant.domain, themeColor: currentTenant.themeColor });
+        if (currentTenant) {
+            setGeneralForm({ name: currentTenant.name, domain: currentTenant.domain, themeColor: currentTenant.themeColor });
+        }
     }, [currentTenant]);
 
     const handleGeneralSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        if (!currentTenant) return;
         updateTenant({ ...currentTenant, ...generalForm });
         setGeneralFormSaved(true);
         setTimeout(() => setGeneralFormSaved(false), 2000);
@@ -629,6 +632,11 @@ const AppSettings = () => {
 
     return (
         <div className="space-y-6">
+            {!currentTenant && (
+                <div className="flex items-center justify-center p-8 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p className="text-yellow-800">{t('common.loading') || 'Carregando...'}</p>
+                </div>
+            )}
             <div>
                 <h1 className="text-2xl font-bold text-gray-900">{t('settings.title')}</h1>
                 <p className="text-gray-500 mt-1">{t('settings.subtitle')}</p>
