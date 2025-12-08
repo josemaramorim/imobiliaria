@@ -27,7 +27,10 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
 export function requireRole(role: string) {
   return function (req: AuthenticatedRequest, res: Response, next: NextFunction) {
     if (!req.user) return res.status(401).json({ error: 'unauthenticated' });
-    if (req.user.role !== role && req.user.role !== 'ADMIN') return res.status(403).json({ error: 'forbidden' });
-    return next();
+    const privilegedRoles = ['ADMIN', 'SUPER_ADMIN'];
+    if (req.user.role === role || privilegedRoles.includes(req.user.role || '')) {
+      return next();
+    }
+    return res.status(403).json({ error: 'forbidden' });
   };
 }

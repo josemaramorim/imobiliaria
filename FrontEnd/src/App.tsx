@@ -18,7 +18,8 @@ import {
   CalendarDays,
   Contact,
   LayoutGrid,
-  ChevronRight
+  ChevronRight,
+  ArrowLeft
 } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import Properties from './pages/Properties';
@@ -60,8 +61,50 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) 
   const { currentTenant, tenants, switchTenant } = useData();
   const [tenantMenuOpen, setTenantMenuOpen] = useState(false);
 
+  const isSuperAdmin = user?.role === UserRole.SUPER_ADMIN;
+
+  // Super Admin pode não ter tenant selecionado — mostrar layout especial
+  if (!currentTenant) {
+    if (isSuperAdmin) {
+      return (
+        <div className={`fixed top-0 left-0 bottom-0 w-64 bg-white border-r border-gray-200 z-50 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:h-screen lg:inset-auto ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+          <div className="flex flex-col h-full">
+            <div className="h-16 flex items-center px-6 border-b border-gray-100 flex-shrink-0">
+              <div>
+                <p className="font-semibold text-gray-900">Super Admin</p>
+                <p className="text-xs text-gray-500">{user?.email}</p>
+              </div>
+              <button className="ml-auto lg:hidden" onClick={onClose}>
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+            <div className="flex-1 p-4 space-y-2 overflow-y-auto">
+              <SidebarItem to="/admin/tenants" icon={Shield} label={t('nav.saas_admin')} active={path === '/admin/tenants'} />
+            </div>
+            <div className="p-4 border-t border-gray-100 flex-shrink-0">
+              <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg text-gray-600 hover:bg-red-50 hover:text-red-700">
+                <LogOut className="w-5 h-5 text-gray-400" />
+                <span>Sair</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Usuários comuns aguardam tenant carregar
+    return (
+      <div className={`fixed top-0 left-0 bottom-0 w-64 bg-white border-r border-gray-200 z-50 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:h-screen lg:inset-auto ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="flex flex-col h-full">
+          <div className="h-16 flex items-center justify-center px-6 border-b border-gray-100 flex-shrink-0">
+            <p className="text-sm text-gray-500">{t('common.loading') || 'Carregando...'}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Determine which tenants to show in the switcher
-  const isSuperAdmin = user?.email === 'admin@saas.com';
   const availableTenants = isSuperAdmin
     ? tenants
     : tenants.filter(t => t.id === user?.tenantId);
@@ -96,7 +139,7 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) 
           </div>
 
           {/* Tenant Switcher */}
-          {isSuperAdmin && (
+          {isSuperAdmin && currentTenant && (
             <div className="p-4 relative flex-shrink-0">
               <button
                 onClick={() => setTenantMenuOpen(!tenantMenuOpen)}
@@ -134,6 +177,17 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) 
 
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+            {/* Super Admin: label informativa quando está acessando tenant */}
+            {user && !user.tenantId && currentTenant && (
+              <div className="px-3 py-2 mb-3 rounded-lg bg-gradient-to-r from-purple-500 to-indigo-600 shadow-md">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-white" />
+                  <p className="text-xs font-bold text-white">Super Admin</p>
+                </div>
+                <p className="text-xs text-purple-100 mt-1">Acessando como administrador</p>
+              </div>
+            )}
+            
             <SidebarItem to="/" icon={LayoutDashboard} label={t('nav.dashboard')} active={path === '/'} />
             <SidebarItem to="/properties" icon={Building2} label={t('nav.properties')} active={path === '/properties'} />
             <SidebarItem to="/crm" icon={Briefcase} label={t('nav.crm')} active={path === '/crm'} />
@@ -144,10 +198,9 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) 
 
           {/* Bottom section */}
           <div className="p-4 border-t border-gray-100 flex-shrink-0">
-            {hasPermission('saas.manage') && (
-              <SidebarItem to="/admin/tenants" icon={Shield} label={t('nav.saas_admin')} active={path === '/admin/tenants'} />
+            {!isSuperAdmin && (
+              <SidebarItem to="/settings" icon={Settings} label={t('nav.settings')} active={path === '/settings'} />
             )}
-            <SidebarItem to="/settings" icon={Settings} label={t('nav.settings')} active={path === '/settings'} />
             <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg text-gray-600 hover:bg-red-50 hover:text-red-700">
               <LogOut className="w-5 h-5 text-gray-400" />
               <span>Sair</span>
@@ -182,31 +235,45 @@ const Header = ({ onMenuClick }: { onMenuClick: () => void }) => {
 const ProtectedLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { globalSettings } = useData();
-  const { user } = usePermission();
+  const { user, hasPermission } = usePermission();
 
   if (globalSettings.maintenanceMode && user?.email !== 'admin@saas.com') {
     return <Navigate to="/maintenance" />;
   }
 
+  // Super Admin (sem tenantId) deve ser redirecionado para admin
+  // EXCETO se ele selecionou um tenant para acessar
+  const isSuperAdmin = user && !user.tenantId;
+  const location = window.location.hash.replace('#', '');
+  const hasTenantSelected = sessionStorage.getItem('apollo_current_tenant');
+  
+  const shouldRedirect = isSuperAdmin && !hasTenantSelected && location !== '/admin/tenants' && !location.startsWith('/admin/');
+
   return (
     <div className="flex h-screen bg-gray-100">
+      {/* Sempre renderizar o Sidebar para permitir logout */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header onMenuClick={() => setSidebarOpen(true)} />
         <main className="flex-1 overflow-x-hidden overflow-y-auto p-6">
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/properties" element={<Properties />} />
-            <Route path="/crm" element={<CRM />} />
-            <Route path="/leads" element={<Leads />} />
-            <Route path="/agenda" element={<Agenda />} />
-            <Route path="/team" element={<Team />} />
-            <Route path="/settings" element={<AppSettings />} />
-            {/* FIX: Removed duplicate route definition for /admin/tenants */}
-            <Route path="/admin/tenants" element={
-              usePermission().hasPermission('saas.manage') ? <SaaSAdmin /> : <Navigate to="/" />
-            } />
-          </Routes>
+          {/* Se Super Admin sem tenant, redirecionar apenas no conteúdo */}
+          {shouldRedirect ? (
+            <Navigate to="/admin/tenants" />
+          ) : (
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/properties" element={<Properties />} />
+              <Route path="/crm" element={<CRM />} />
+              <Route path="/leads" element={<Leads />} />
+              <Route path="/agenda" element={<Agenda />} />
+              <Route path="/team" element={<Team />} />
+              <Route path="/settings" element={<AppSettings />} />
+              {/* FIX: Removed duplicate route definition for /admin/tenants */}
+              <Route path="/admin/tenants" element={
+                hasPermission('saas.manage') ? <SaaSAdmin /> : <Navigate to="/" />
+              } />
+            </Routes>
+          )}
         </main>
       </div>
     </div>
@@ -230,8 +297,8 @@ const App = () => {
   return (
     <LanguageProvider>
       <AuthProvider>
-        <DataProvider>
-          <HashRouter>
+        <HashRouter>
+          <DataProvider>
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -242,8 +309,8 @@ const App = () => {
                 </ProtectedRoute>
               } />
             </Routes>
-          </HashRouter>
-        </DataProvider>
+          </DataProvider>
+        </HashRouter>
       </AuthProvider>
     </LanguageProvider>
   );

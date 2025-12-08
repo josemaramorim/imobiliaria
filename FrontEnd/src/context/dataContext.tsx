@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Visit, Lead, Tag, Tenant, Property, Opportunity, User, CustomFieldConfig, ApiKey, Webhook, GlobalSettings, SubscriptionPlan, Invoice, PaymentGateway, PaymentGatewayId } from '../types/types';
-import { MOCK_TENANTS, MOCK_TEAM, MOCK_CUSTOM_FIELDS, MOCK_LEAD_CUSTOM_FIELDS, MOCK_PLANS, MOCK_INVOICES, MOCK_PAYMENT_GATEWAYS } from '../utils/constants';
 import { usePermission } from './auth';
 
 interface DataContextType {
@@ -99,17 +98,28 @@ const useSessionStorage = <T,>(key: string, initialValue: T): [T, React.Dispatch
 
 export const DataProvider = ({ children }: { children?: ReactNode }) => {
   const { user } = usePermission();
-  // Global States (Not Tenant-Scoped)
-  const [tenants, setTenants] = useSessionStorage<Tenant[]>('apollo_tenants', MOCK_TENANTS);
-  const [plans, setPlans] = useSessionStorage<SubscriptionPlan[]>('apollo_plans', MOCK_PLANS);
-  const [paymentGateways, setPaymentGateways] = useSessionStorage<PaymentGateway[]>('apollo_payment_gateways', MOCK_PAYMENT_GATEWAYS);
-  const [allInvoices, setAllInvoices] = useSessionStorage<Invoice[]>('apollo_invoices', MOCK_INVOICES);
-  const [allTeam, setAllTeam] = useSessionStorage<User[]>('apollo_team', MOCK_TEAM);
+  // Global States (Not Tenant-Scoped) — inicializa vazio, carrega via API
+  const [tenants, setTenants] = useSessionStorage<Tenant[]>('apollo_tenants', []);
+  const [plans, setPlans] = useSessionStorage<SubscriptionPlan[]>('apollo_plans', []);
+  const [paymentGateways, setPaymentGateways] = useSessionStorage<PaymentGateway[]>('apollo_payment_gateways', []);
+  const [allInvoices, setAllInvoices] = useSessionStorage<Invoice[]>('apollo_invoices', []);
+  const [allTeam, setAllTeam] = useSessionStorage<User[]>('apollo_team', []);
 
-  const [activeTenantId, setActiveTenantId] = useSessionStorage<string>('apollo_current_tenant', MOCK_TENANTS[0].id);
+  const [activeTenantId, setActiveTenantId] = useSessionStorage<string>('apollo_current_tenant', '');
   const [globalSettings, setGlobalSettings] = useSessionStorage<GlobalSettings>('apollo_global_settings', {
-    platformName: 'Apollo SaaS', defaultCurrency: 'BRL', maintenanceMode: false, allowSignups: true
+    platformName: '', defaultCurrency: '', maintenanceMode: false, allowSignups: true
   });
+  
+  // Ler tenant do query parameter na inicialização (para nova aba)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search || window.location.hash.split('?')[1]);
+    const tenantFromUrl = params.get('tenant');
+    if (tenantFromUrl && tenantFromUrl !== activeTenantId) {
+      console.log('📊 [DataContext] Tenant detectado na URL:', tenantFromUrl);
+      setActiveTenantId(tenantFromUrl);
+    }
+  }, []);
+  
   // Sync activeTenantId with logged user
   useEffect(() => {
     if (user && user.tenantId && user.tenantId !== activeTenantId) {
@@ -117,10 +127,13 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     }
   }, [user, activeTenantId, setActiveTenantId]);
 
-  const currentTenant = tenants.find(t => t.id === activeTenantId) || tenants[0];
+  const currentTenant = tenants.find(t => t.id === activeTenantId);
   const token = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
 
-  const createTenantScopedKey = (baseKey: string) => `apollo_${currentTenant.id}_${baseKey}_v3`;
+  const createTenantScopedKey = (baseKey: string) => {
+    if (!currentTenant) return `apollo_no_tenant_${baseKey}_v3`;
+    return `apollo_${currentTenant.id}_${baseKey}_v3`;
+  };
 
   // Tenant-Scoped States
   const [visits, setVisits] = useSessionStorage<Visit[]>(createTenantScopedKey('visits'), []);
@@ -128,14 +141,25 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
   const [tags, setTags] = useSessionStorage<Tag[]>(createTenantScopedKey('tags'), []);
   const [properties, setProperties] = useSessionStorage<Property[]>(createTenantScopedKey('properties'), []);
   const [opportunities, setOpportunities] = useSessionStorage<Opportunity[]>(createTenantScopedKey('opportunities'), []);
-  const [propertyCustomFields, setPropertyCustomFields] = useSessionStorage<CustomFieldConfig[]>(createTenantScopedKey('prop_fields'), MOCK_CUSTOM_FIELDS);
-  const [leadCustomFields, setLeadCustomFields] = useSessionStorage<CustomFieldConfig[]>(createTenantScopedKey('lead_fields'), MOCK_LEAD_CUSTOM_FIELDS);
+  const [propertyCustomFields, setPropertyCustomFields] = useSessionStorage<CustomFieldConfig[]>(createTenantScopedKey('prop_fields'), []);
+  const [leadCustomFields, setLeadCustomFields] = useSessionStorage<CustomFieldConfig[]>(createTenantScopedKey('lead_fields'), []);
   const [apiKeys, setApiKeys] = useSessionStorage<ApiKey[]>(createTenantScopedKey('apikeys'), []);
   const [webhooks, setWebhooks] = useSessionStorage<Webhook[]>(createTenantScopedKey('webhooks'), []);
 
   // Load tenant-scoped data from backend when we have a token and a tenant selected
   useEffect(() => {
-    if (!token) return; // not authenticated
+    if (!token || !user) {
+      console.log('📊 [DataContext] Pulando: sem token ou user');
+      return; // not authenticated
+    }
+    
+    // Super Admin (user without tenantId) should not load tenant-scoped data
+    if (!user.tenantId && !activeTenantId) {
+      console.log('📊 [DataContext] Super Admin sem tenant selecionado - pulando carregamento de dados tenant-scoped');
+      return;
+    }
+
+    console.log('📊 [DataContext] Carregando dados tenant-scoped... user.tenantId:', user.tenantId, 'activeTenantId:', activeTenantId);
 
     (async () => {
       try {
@@ -168,7 +192,10 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
   }, [token, activeTenantId, user?.tenantId]);
 
   useEffect(() => {
-    if (!token) return;
+    if (!token || !user) return;
+    
+    // Super Admin sem tenant não deve carregar dados tenant-scoped
+    if (!user.tenantId && !currentTenant) return;
 
     (async () => {
       try {
@@ -184,16 +211,20 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         console.warn('Failed to fetch team data, using local state', err);
       }
     })();
-  }, [token, currentTenant.id]);
+  }, [token, currentTenant?.id]);
 
   // Load global SaaS data (tenants, plans) when authenticated
   useEffect(() => {
-    if (!token) return;
+    // Only load if token exists AND user is authenticated
+    if (!token || !user) return;
+    
     (async () => {
       try {
         const { api } = await import('../services/api');
         const tnts = await api.listTenants();
-        if (Array.isArray(tnts)) setTenants(tnts as any);
+        if (Array.isArray(tnts) && tnts.length > 0) {
+          setTenants(tnts as any);
+        }
         const pls = await api.listPlans();
         if (Array.isArray(pls)) setPlans(pls as any);
         if (!user?.tenantId) {
@@ -204,17 +235,19 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         console.warn('Failed to fetch global SaaS data, using local state', err);
       }
     })();
-  }, [token, user?.tenantId]);
+  }, [token, user]);
 
   // Filtered data based on current tenant
-  const team = allTeam.filter(t => t.tenantId === currentTenant.id);
-  const invoices = allInvoices.filter(i => i.tenantId === currentTenant.id);
+  const team = currentTenant ? allTeam.filter(t => t.tenantId === currentTenant.id) : [];
+  const invoices = currentTenant ? allInvoices.filter(i => i.tenantId === currentTenant.id) : [];
 
   // --- SaaS Management ---
   const switchTenant = (tenantId: string) => {
-    sessionStorage.setItem('apollo_current_tenant', JSON.stringify(tenantId));
-    const baseUrl = window.location.href.split('#')[0];
-    window.location.href = baseUrl + '#/';
+    // Salvar tenant ID no sessionStorage
+    sessionStorage.setItem('apollo_current_tenant', tenantId);
+    // Abrir painel do tenant em nova aba com query parameter para forçar o carregamento
+    const newUrl = `${window.location.origin}${window.location.pathname}#/?tenant=${tenantId}`;
+    window.open(newUrl, '_blank');
   };
 
   const addTenant = (tenantData: Omit<Tenant, 'id' | 'createdAt'>, trialDuration: number) => {
@@ -707,11 +740,13 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
   };
 
   const resetData = () => {
-    Object.keys(sessionStorage).forEach(key => {
-      if (key.startsWith(`apollo_${currentTenant.id}`)) {
-        sessionStorage.removeItem(key);
-      }
-    });
+    if (currentTenant) {
+      Object.keys(sessionStorage).forEach(key => {
+        if (key.startsWith(`apollo_${currentTenant.id}`)) {
+          sessionStorage.removeItem(key);
+        }
+      });
+    }
     window.location.reload();
   };
 

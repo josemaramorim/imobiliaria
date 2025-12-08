@@ -863,7 +863,7 @@ const LeadFormModal = ({ isOpen, onClose, onSubmit, customFields, tags, initialD
         isActive: true,
         tags: [],
         customValues: {},
-        tenantId: currentTenant.id,
+        tenantId: currentTenant?.id || '',
         interactions: []
     });
 
@@ -880,11 +880,11 @@ const LeadFormModal = ({ isOpen, onClose, onSubmit, customFields, tags, initialD
                 isActive: true,
                 tags: [],
                 customValues: {},
-                tenantId: currentTenant.id,
+                tenantId: currentTenant?.id || '',
                 interactions: []
             });
         }
-    }, [isOpen, initialData, currentTenant]);
+    }, [isOpen, initialData, currentTenant?.id]);
 
     if (!isOpen) return null;
 

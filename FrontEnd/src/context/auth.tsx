@@ -1,6 +1,6 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
 import { UserRole, Permission, User, Tenant } from '../types/types';
-import { ROLE_PERMISSIONS, MOCK_TEAM, MOCK_TENANTS } from '../utils/constants';
+import { ROLE_PERMISSIONS } from '../utils/constants';
 
 interface AuthContextType {
   user: User | null;
@@ -15,19 +15,34 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const SUPER_ADMIN_USER: User = {
-  id: 'usr_super_admin', name: 'Super Admin', email: 'admin@saas.com', role: UserRole.ADMIN,
+  id: 'usr_super_admin', name: 'Super Admin', email: 'admin@saas.com', role: UserRole.SUPER_ADMIN,
   avatarUrl: 'https://ui-avatars.com/api/?name=SA&background=000&color=fff', status: 'ACTIVE', tenantId: 'saas_global',
 };
 
 export const AuthProvider = ({ children }: { children?: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+  // Initialize from sessionStorage if possible
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const cachedUser = sessionStorage.getItem('apollo_session_user');
+      if (cachedUser) {
+        const user = JSON.parse(cachedUser);
+        console.log('🔐 [AuthProvider] Usuário carregado do cache na inicialização:', user.email);
+        return user;
+      }
+    } catch (e) {
+      console.warn('🔐 [AuthProvider] Erro ao carregar cache na inicialização:', e);
+    }
+    return null;
+  });
   const [isLoading, setIsLoading] = useState(true);
 
   // Try to recover session from sessionStorage and validate with backend
-  // NOTE: only restore session if a token exists — prevents the app from
-  // treating a stale `apollo_session_user` without a token as authenticated.
   useEffect(() => {
     const token = sessionStorage.getItem('apollo_token');
+    const cachedUser = sessionStorage.getItem('apollo_session_user');
+    
+    console.log('🔐 [AuthProvider] Token no sessionStorage:', token ? '✓' : '✗');
+    console.log('🔐 [AuthProvider] User em cache:', cachedUser ? '✓' : '✗');
 
     if (!token) {
       // no token => ensure any stale session data is cleared
@@ -37,30 +52,44 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
       return;
     }
 
+    // Se temos token e usuário em cache, usar o cache imediatamente
+    if (cachedUser) {
+      try {
+        const user = JSON.parse(cachedUser);
+        console.log('🔐 [AuthProvider] Usando usuário do cache:', user.email);
+        setUser(user);
+        setIsLoading(false);
+        
+        // Ainda assim, validar o token silenciosamente em background
+        (async () => {
+          try {
+            const { user: me } = await (await import('../services/api')).api.getMe();
+            console.log('🔐 [AuthProvider] Token validado com sucesso');
+            if (me) {
+              setUser(me);
+              sessionStorage.setItem('apollo_session_user', JSON.stringify(me));
+            }
+          } catch (err) {
+            console.warn('🔐 [AuthProvider] Validação de token falhou, mas usando cache', err);
+          }
+        })();
+        return;
+      } catch (e) {
+        console.warn('🔐 [AuthProvider] Erro ao parsear cache:', e);
+      }
+    }
+
+    // Caso contrário, validar token
     (async () => {
       try {
-        // validate token by fetching /users/me
         const { user: me } = await (await import('../services/api')).api.getMe();
+        console.log('🔐 [AuthProvider] getMe() sucesso:', me?.email);
         setUser(me || null);
         if (me) sessionStorage.setItem('apollo_session_user', JSON.stringify(me));
       } catch (err) {
-        // Try to recover from sessionStorage before logging out
-        const cachedUser = sessionStorage.getItem('apollo_session_user');
-
-        if (cachedUser) {
-          try {
-            setUser(JSON.parse(cachedUser));
-          } catch {
-            // Invalid cached data, clear everything
-            sessionStorage.removeItem('apollo_token');
-            sessionStorage.removeItem('apollo_session_user');
-            setUser(null);
-          }
-        } else {
-          // No cached user, clear token
-          sessionStorage.removeItem('apollo_token');
-          setUser(null);
-        }
+        console.warn('🔐 [AuthProvider] getMe() erro:', err);
+        sessionStorage.removeItem('apollo_token');
+        setUser(null);
       } finally {
         setIsLoading(false);
       }
@@ -75,14 +104,21 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
       // resp: { token, user }
       if (!resp || !resp.token) throw new Error('auth.error.invalid');
 
+      console.log('🔐 [AuthProvider] Login bem-sucedido, salvando token...');
       sessionStorage.setItem('apollo_token', resp.token);
       sessionStorage.setItem('apollo_session_user', JSON.stringify(resp.user));
+      console.log('🔐 [AuthProvider] Token salvo:', resp.token.substring(0, 20) + '...');
 
       if (resp.user && (resp.user as any).tenantId) {
-        sessionStorage.setItem('apollo_current_tenant', JSON.stringify((resp.user as any).tenantId));
+        sessionStorage.setItem('apollo_current_tenant', (resp.user as any).tenantId);
+      } else if (resp.user && resp.user.role === UserRole.SUPER_ADMIN) {
+        // Super Admin não tem tenant, redireciona para página de administração
+        sessionStorage.removeItem('apollo_current_tenant');
+        window.location.hash = '#/admin/tenants';
       }
       setUser(resp.user);
     } catch (err) {
+      console.error('🔐 [AuthProvider] Erro no login:', err);
       throw err;
     } finally {
       setIsLoading(false);
@@ -98,7 +134,7 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
 
   const hasPermission = (permission: Permission): boolean => {
     if (!user) return false;
-    if (user.email === 'admin@saas.com') return true;
+    if (user.role === UserRole.SUPER_ADMIN) return true;
     const permissions = ROLE_PERMISSIONS[user.role] || [];
     return permissions.includes(permission);
   };
