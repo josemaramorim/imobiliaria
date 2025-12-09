@@ -14,9 +14,11 @@ export const tenantUpdateSchema = z.object({
   name: z.string().min(2).optional(),
   domain: z.string().min(2).optional(),
   themeColor: z.string().optional(),
-  logoUrl: z.string().optional(),
+  logoUrl: z.string().nullable().optional(),
   status: z.enum(['ACTIVE', 'INACTIVE', 'TRIAL', 'PAST_DUE']).optional(),
-  nextBillingDate: z.string().optional(),
+  planId: z.string().optional(),
+  paymentGatewayId: z.string().optional(),
+  nextBillingDate: z.string().nullable().optional(),
 });
 
 export const planSchema = z.object({

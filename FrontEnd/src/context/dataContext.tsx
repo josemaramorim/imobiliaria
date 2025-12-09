@@ -7,8 +7,8 @@ interface DataContextType {
   tenants: Tenant[];
   currentTenant: Tenant;
   switchTenant: (tenantId: string) => void;
-  addTenant: (tenant: Omit<Tenant, 'id' | 'createdAt'>, trialDuration: number) => void;
-  updateTenant: (tenant: Tenant) => void;
+  addTenant: (tenant: Omit<Tenant, 'id' | 'createdAt'>, trialDuration: number) => Promise<void>;
+  updateTenant: (tenant: Tenant) => Promise<void>;
   deleteTenant: (tenantId: string) => void;
 
   plans: SubscriptionPlan[];
@@ -255,7 +255,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     window.open(newUrl, '_blank');
   };
 
-  const addTenant = (tenantData: Omit<Tenant, 'id' | 'createdAt'>, trialDuration: number) => {
+  const addTenant = async (tenantData: Omit<Tenant, 'id' | 'createdAt'>, trialDuration: number): Promise<void> => {
     // optimistic local add
     const tempTenant: Tenant = {
       ...tenantData,
@@ -269,42 +269,48 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     const tokenLocal = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
     if (!tokenLocal) {
       console.warn('[DataContext] addTenant: no auth token found — skipping remote create');
-      return;
+      throw new Error('Não autenticado. Faça login novamente.');
     }
-    (async () => {
-      try {
-        const { api } = await import('../services/api');
-        const created = await api.createTenant({ ...tenantData, trialDuration });
-        if (created && created.id) {
-          setTenants(prev => prev.map(t => t.id === tempTenant.id ? created : t));
-        } else {
-          const all = await api.listTenants();
-          if (Array.isArray(all)) setTenants(all as any);
-        }
-      } catch (err) {
-        console.error('Failed to create tenant remote:', err);
+    
+    try {
+      const { api } = await import('../services/api');
+      const created = await api.createTenant({ ...tenantData, trialDuration });
+      if (created && created.id) {
+        setTenants(prev => prev.map(t => t.id === tempTenant.id ? created : t));
+      } else {
+        const all = await api.listTenants();
+        if (Array.isArray(all)) setTenants(all as any);
       }
-    })();
+    } catch (err) {
+      console.error('Failed to create tenant remote:', err);
+      // Remove the temporary tenant on error
+      setTenants(prev => prev.filter(t => t.id !== tempTenant.id));
+      throw err;
+    }
   };
 
-  const updateTenant = (tenant: Tenant) => {
+  const updateTenant = async (tenant: Tenant): Promise<void> => {
+    console.log('📝 [DataContext] updateTenant called with:', tenant);
     const previous = tenants;
     setTenants(prev => prev.map(t => t.id === tenant.id ? tenant : t));
     const tokenLocal = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
     if (!tokenLocal) {
       console.warn('[DataContext] updateTenant: no auth token found — skipping remote update');
-      return;
+      throw new Error('Não autenticado. Faça login novamente.');
     }
-    (async () => {
-      try {
-        const { api } = await import('../services/api');
-        const updated = await api.updateTenant(tenant.id, tenant);
-        setTenants(prev => prev.map(t => t.id === tenant.id ? updated : t));
-      } catch (err) {
-        console.error('Failed to update tenant remote, reverting:', err);
-        setTenants(previous);
-      }
-    })();
+    
+    try {
+      const { api } = await import('../services/api');
+      console.log('📡 [DataContext] Calling api.updateTenant with id:', tenant.id);
+      const updated = await api.updateTenant(tenant.id, tenant);
+      console.log('✅ [DataContext] Tenant updated successfully:', updated);
+      setTenants(prev => prev.map(t => t.id === tenant.id ? updated : t));
+    } catch (err: any) {
+      console.error('❌ [DataContext] Failed to update tenant remote, reverting:', err);
+      console.error('Error details:', err.response?.data || err.message);
+      setTenants(previous);
+      throw err; // Re-throw to let the caller handle it
+    }
   };
   const deleteTenant = (tenantId: string) => {
     const previous = tenants;

@@ -130,7 +130,20 @@ export const api = {
     return resp.data.tenant;
   },
   updateTenant: async (id: string, payload: any) => {
-    const resp = await client.put(`/tenants/${id}`, payload);
+    // Enviar apenas os campos permitidos pelo backend schema, filtrando null -> undefined
+    const allowedFields: any = {};
+    if (payload.name !== undefined) allowedFields.name = payload.name;
+    if (payload.domain !== undefined) allowedFields.domain = payload.domain;
+    if (payload.themeColor !== undefined) allowedFields.themeColor = payload.themeColor;
+    if (payload.logoUrl !== undefined && payload.logoUrl !== null) allowedFields.logoUrl = payload.logoUrl;
+    if (payload.status !== undefined) allowedFields.status = payload.status;
+    if (payload.planId !== undefined) allowedFields.planId = payload.planId;
+    if (payload.paymentGatewayId !== undefined) allowedFields.paymentGatewayId = payload.paymentGatewayId;
+    if (payload.nextBillingDate !== undefined && payload.nextBillingDate !== null) allowedFields.nextBillingDate = payload.nextBillingDate;
+    
+    console.log('📤 [API] Sending updateTenant request:', { id, payload: allowedFields });
+    const resp = await client.put(`/tenants/${id}`, allowedFields);
+    console.log('📥 [API] Received updateTenant response:', resp.data);
     return resp.data.tenant;
   },
   deleteTenant: async (id: string) => {

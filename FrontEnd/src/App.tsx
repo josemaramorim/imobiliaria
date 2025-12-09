@@ -19,7 +19,9 @@ import {
   Contact,
   LayoutGrid,
   ChevronRight,
-  ArrowLeft
+  ArrowLeft,
+  CreditCard,
+  Package
 } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import Properties from './pages/Properties';
@@ -32,6 +34,12 @@ import SaaSAdmin from './pages/SaaSAdmin';
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
 import MaintenancePage from './pages/Maintenance';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminUsers from './pages/admin/AdminUsers';
+import AdminTenants from './pages/admin/AdminTenants';
+import AdminPlans from './pages/admin/AdminPlans';
+import AdminGateways from './pages/admin/AdminGateways';
+import AdminSettings from './pages/admin/AdminSettings';
 
 import { Tenant, UserRole } from './types/types';
 import { LanguageProvider, useLanguage } from './config/i18n';
@@ -79,7 +87,12 @@ const Sidebar = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) 
               </button>
             </div>
             <div className="flex-1 p-4 space-y-2 overflow-y-auto">
-              <SidebarItem to="/admin/tenants" icon={Shield} label={t('nav.saas_admin')} active={path === '/admin/tenants'} />
+              <SidebarItem to="/admin" icon={LayoutDashboard} label="Dashboard" active={path === '/admin'} />
+              <SidebarItem to="/admin/tenants" icon={Building2} label="Tenants" active={path === '/admin/tenants'} />
+              <SidebarItem to="/admin/users" icon={Users} label="Usuários" active={path === '/admin/users'} />
+              <SidebarItem to="/admin/plans" icon={Package} label="Planos" active={path === '/admin/plans'} />
+              <SidebarItem to="/admin/gateways" icon={CreditCard} label="Gateways" active={path === '/admin/gateways'} />
+              <SidebarItem to="/admin/settings" icon={Settings} label="Configurações" active={path === '/admin/settings'} />
             </div>
             <div className="p-4 border-t border-gray-100 flex-shrink-0">
               <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg text-gray-600 hover:bg-red-50 hover:text-red-700">
@@ -268,9 +281,24 @@ const ProtectedLayout = () => {
               <Route path="/agenda" element={<Agenda />} />
               <Route path="/team" element={<Team />} />
               <Route path="/settings" element={<AppSettings />} />
-              {/* FIX: Removed duplicate route definition for /admin/tenants */}
+              {/* Admin routes */}
+              <Route path="/admin" element={
+                hasPermission('saas.manage') ? <AdminDashboard /> : <Navigate to="/" />
+              } />
               <Route path="/admin/tenants" element={
-                hasPermission('saas.manage') ? <SaaSAdmin /> : <Navigate to="/" />
+                hasPermission('saas.manage') ? <AdminTenants /> : <Navigate to="/" />
+              } />
+              <Route path="/admin/users" element={
+                hasPermission('saas.manage') ? <AdminUsers /> : <Navigate to="/" />
+              } />
+              <Route path="/admin/plans" element={
+                hasPermission('saas.manage') ? <AdminPlans /> : <Navigate to="/" />
+              } />
+              <Route path="/admin/gateways" element={
+                hasPermission('saas.manage') ? <AdminGateways /> : <Navigate to="/" />
+              } />
+              <Route path="/admin/settings" element={
+                hasPermission('saas.manage') ? <AdminSettings /> : <Navigate to="/" />
               } />
             </Routes>
           )}

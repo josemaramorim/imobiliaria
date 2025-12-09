@@ -41,13 +41,24 @@ router.get('/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
 // PUT /tenants/:id
 router.put('/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
   const id = req.params.id;
+  console.log('📝 [TENANT] PUT /:id called with id:', id);
+  console.log('📝 [TENANT] Request body:', JSON.stringify(req.body, null, 2));
+  console.log('📝 [TENANT] User:', req.user);
+  
   const parse = tenantUpdateSchema.safeParse(req.body);
-  if (!parse.success) return res.status(400).json({ error: 'validation', details: parse.error.format() });
+  if (!parse.success) {
+    console.error('❌ [TENANT] Validation failed:', parse.error.format());
+    return res.status(400).json({ error: 'validation', details: parse.error.format() });
+  }
+  
+  console.log('✅ [TENANT] Validation passed, parsed data:', parse.data);
+  
   try {
     const tnt = await prisma.tenant.update({ where: { id }, data: parse.data });
+    console.log('✅ [TENANT] Tenant updated successfully:', tnt);
     return res.json({ message: t(req, 'tenant.updated'), tenant: tnt });
   } catch (err: any) {
-    console.error('update tenant err', err);
+    console.error('❌ [TENANT] Update tenant error:', err);
     return res.status(500).json({ error: 'server_error', message: err.message });
   }
 });
