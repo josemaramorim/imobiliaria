@@ -1,6 +1,6 @@
 import React from 'react';
 import { Opportunity, OpportunityStage, Tag } from '../types/types';
-import { Edit2 } from 'lucide-react';
+import { Edit2, Trash2 } from 'lucide-react';
 
 interface KanbanColumnProps {
   id: string;
@@ -11,11 +11,10 @@ interface KanbanColumnProps {
   onDrop: (e: React.DragEvent, targetStage: string) => void;
   onAddClick: () => void;
   onEdit: (opp: Opportunity) => void;
+  onDelete?: (id: string) => void;
 }
 
-const KanbanColumn: React.FC<KanbanColumnProps> = ({
-  id, title, color, opportunities, onDragOver, onDrop, onAddClick, onEdit
-}) => {
+const KanbanColumn: React.FC<KanbanColumnProps> = ({ id, title, color, opportunities, onDragOver, onDrop, onAddClick, onEdit, onDelete }) => {
   const totalValue = opportunities.reduce((s, o) => s + (o.value || 0), 0);
   const formattedTotal = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalValue);
 
@@ -47,7 +46,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
         {opportunities.map(opp => (
           <div
             key={opp.id}
-            className="relative bg-white border border-gray-100 rounded-lg p-3 shadow-sm hover:shadow-md cursor-grab transition-shadow"
+            className="group relative bg-white border border-gray-100 rounded-lg p-3 shadow-sm hover:shadow-md cursor-grab transition-shadow"
             onClick={() => onEdit(opp)}
             draggable
             onDragStart={e => { e.dataTransfer.setData('opportunityId', opp.id); (e.currentTarget as HTMLElement).classList.add('cursor-grabbing'); }}
@@ -58,9 +57,15 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
               <div className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-md font-medium">{opp.probability ?? 0}% Prob.</div>
             </div>
             {/* edit icon */}
-            <button onClick={(e) => { e.stopPropagation(); onEdit(opp); }} className="absolute right-3 top-3 opacity-0 hover:opacity-100 transition-opacity bg-white rounded p-1">
-              <Edit2 className="w-4 h-4 text-gray-500" />
-            </button>
+            {/* edit & delete icons */}
+            <div className="absolute right-3 top-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded p-1">
+              <button onClick={(e) => { e.stopPropagation(); onEdit(opp); }} className="rounded p-1">
+                <Edit2 className="w-4 h-4 text-gray-500" />
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); if (onDelete) onDelete(opp.id); }} className="rounded p-1">
+                <Trash2 className="w-4 h-4 text-red-500" />
+              </button>
+            </div>
             <div className="flex justify-between items-start">
               <div className="flex-1 pr-2">
                 <div className="font-semibold text-gray-800 text-sm line-clamp-1">{opp.propertyTitle || opp.leadName || 'Sem título'}</div>

@@ -8,7 +8,7 @@ interface DealFormModalProps {
 import React, { useState, useCallback, useEffect } from 'react';
 import { KANBAN_COLUMNS } from '../utils/constants';
 import { Opportunity, OpportunityStage, UserRole, Visit, Tag, User } from '../types/types';
-import { Plus, Calendar, DollarSign, User as UserIcon, X, ChevronDown, ChevronLeft, ChevronRight, Columns, Edit2, Trash2, Clock, MapPin, Check, Bell, Tag as TagIcon } from 'lucide-react';
+import { Plus, Calendar, DollarSign, User as UserIcon, X, ChevronDown, ChevronLeft, ChevronRight, Columns, Edit2, Trash2, Clock, MapPin, Check, Bell, Tag as TagIcon, AlertTriangle } from 'lucide-react';
 import { useLanguage } from '../config/i18n';
 import { useData } from '../context/dataContext';
 import { usePermission, Can } from '../context/auth';
@@ -653,7 +653,7 @@ interface CRMProps {
 const CRM: React.FC<CRMProps> = ({ defaultView = 'kanban' }) => {
     const [isTagsManagerOpen, setIsTagsManagerOpen] = useState(false);
     const { 
-        opportunities, addOpportunity, updateOpportunity, 
+        opportunities, addOpportunity, updateOpportunity, deleteOpportunity,
         visits, addVisit, updateVisit, deleteVisit,
         tags, addTag, updateTag, deleteTag
     } = useData();
@@ -662,6 +662,8 @@ const CRM: React.FC<CRMProps> = ({ defaultView = 'kanban' }) => {
   
   const [isDealModalOpen, setIsDealModalOpen] = useState(false);
   const [editingOpportunity, setEditingOpportunity] = useState<Opportunity | undefined>(undefined);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   
   const [isVisitModalOpen, setIsVisitModalOpen] = useState(false);
   const [editingVisit, setEditingVisit] = useState<Visit | undefined>(undefined);
@@ -716,6 +718,20 @@ const CRM: React.FC<CRMProps> = ({ defaultView = 'kanban' }) => {
   const handleEditOpportunity = (opp: Opportunity) => {
       setEditingOpportunity(opp);
       setIsDealModalOpen(true);
+  };
+
+  const handleDeleteOpportunity = (id: string) => {
+      const opp = opportunities.find(o => o.id === id);
+      setDeleteTarget({ id, name: opp?.propertyTitle || opp?.leadName || 'Sem título' });
+      setIsDeleteModalOpen(true);
+  };
+
+  const confirmDeleteOpportunity = () => {
+      if (!deleteTarget) return;
+      deleteOpportunity(deleteTarget.id);
+      toast.success(t('crm.deal_deleted') || 'Oportunidade excluída');
+      setIsDeleteModalOpen(false);
+      setDeleteTarget(null);
   };
 
   const openNewDealModal = () => {
@@ -825,6 +841,7 @@ const CRM: React.FC<CRMProps> = ({ defaultView = 'kanban' }) => {
                         onDrop={handleDrop}
                         onAddClick={openNewDealModal}
                         onEdit={handleEditOpportunity}
+                        onDelete={handleDeleteOpportunity}
                     />
                 ))}
             </div>
@@ -851,6 +868,27 @@ const CRM: React.FC<CRMProps> = ({ defaultView = 'kanban' }) => {
         onSubmit={handleAddVisit}
         initialData={editingVisit}
       />
+            {/* Delete confirmation modal for opportunities */}
+            {isDeleteModalOpen && deleteTarget && (
+                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center relative">
+                        <div className="w-12 h-12 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <AlertTriangle className="w-6 h-6" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900 mb-2">{t('common.delete')}?</h3>
+                        <p className="text-sm text-gray-500 mb-1">{t('common.confirm_delete')}</p>
+                        <p className="text-sm font-bold text-gray-800 mb-6">"{deleteTarget.name}"</p>
+                        <div className="flex gap-3">
+                            <button onClick={() => { setIsDeleteModalOpen(false); setDeleteTarget(null); }} className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors">
+                                {t('common.cancel')}
+                            </button>
+                            <button onClick={confirmDeleteOpportunity} className="flex-1 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 shadow-sm transition-colors">
+                                {t('common.delete')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
     </div>
   );
 };

@@ -143,7 +143,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
   const [leads, setLeads] = useSessionStorage<Lead[]>(createTenantScopedKey('leads'), []);
   const [tags, setTags] = useSessionStorage<Tag[]>(createTenantScopedKey('tags'), []);
   const [properties, setProperties] = useSessionStorage<Property[]>(createTenantScopedKey('properties'), []);
-  const [opportunities, setOpportunities] = useSessionStorage<Opportunity[]>(createTenantScopedKey('opportunities'), []);
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [propertyCustomFields, setPropertyCustomFields] = useSessionStorage<CustomFieldConfig[]>(createTenantScopedKey('prop_fields'), []);
   const [leadCustomFields, setLeadCustomFields] = useSessionStorage<CustomFieldConfig[]>(createTenantScopedKey('lead_fields'), []);
   const [apiKeys, setApiKeys] = useSessionStorage<ApiKey[]>(createTenantScopedKey('apikeys'), []);
@@ -190,6 +190,11 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
         const tgs = await api.listTags();
         console.log('📊 [DataContext] Tags recebidas:', tgs);
         if (Array.isArray(tgs)) setTags(tgs as any);
+
+        console.log('📊 [DataContext] Carregando opportunities...');
+        const opps = await api.listOpportunities();
+        console.log('📊 [DataContext] Opportunities recebidas:', opps);
+        if (Array.isArray(opps)) setOpportunities(opps as any);
         
         try {
           console.log('📊 [DataContext] Carregando custom fields...');
@@ -751,65 +756,50 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
   };
 
   const addOpportunity = (opp: Opportunity) => {
-    const previous = opportunities;
-    // Optimistic update: prepend locally
-    setOpportunities(p => [{ ...opp, tenantId: currentTenant.id }, ...p]);
-
     const token = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
-    if (!token) return;
+    if (!token) return alert('Não autenticado');
 
     (async () => {
       try {
         const { api } = await import('../services/api');
-        // Ensure we send tenantId in payload so backend validation (zod) passes
         const payload = { ...opp, tenantId: currentTenant.id };
-        const created = await api.createOpportunity(payload);
-        if (created) {
-          // replace optimistic item with server-provided one
-          setOpportunities(prev => [created, ...prev.filter(p => p.id !== created.id)]);
-        } else {
-          // refresh list if create didn't return created object
-          const all = await api.listOpportunities();
-          setOpportunities(Array.isArray(all) ? all : previous);
-        }
+        await api.createOpportunity(payload);
+        const refreshed = await api.listOpportunities();
+        if (Array.isArray(refreshed)) setOpportunities(refreshed as any);
       } catch (err: any) {
         console.error('Failed to create opportunity remote:', err);
-        setOpportunities(previous); // rollback
         alert(`Erro ao criar oportunidade: ${err?.response?.data?.message || err?.message || 'Erro desconhecido'}`);
       }
     })();
   };
 
   const updateOpportunity = (opp: Opportunity) => {
-    const previous = opportunities;
-    setOpportunities(p => p.map(o => o.id === opp.id ? opp : o));
     const token = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
-    if (!token) return;
+    if (!token) return alert('Não autenticado');
     (async () => {
       try {
         const { api } = await import('../services/api');
-        const updated = await api.updateOpportunity(opp.id, opp);
-        if (updated) setOpportunities(prev => prev.map(o => o.id === opp.id ? updated : o));
+        await api.updateOpportunity(opp.id, opp);
+        const refreshed = await api.listOpportunities();
+        if (Array.isArray(refreshed)) setOpportunities(refreshed as any);
       } catch (err: any) {
         console.error('Failed to update opportunity remote:', err);
-        setOpportunities(previous);
         alert(`Erro ao atualizar oportunidade: ${err?.response?.data?.message || err?.message || 'Erro desconhecido'}`);
       }
     })();
   };
 
   const deleteOpportunity = (id: string) => {
-    const previous = opportunities;
-    setOpportunities(p => p.filter(o => o.id !== id));
     const token = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
-    if (!token) return;
+    if (!token) return alert('Não autenticado');
     (async () => {
       try {
         const { api } = await import('../services/api');
         await api.deleteOpportunity(id);
+        const refreshed = await api.listOpportunities();
+        if (Array.isArray(refreshed)) setOpportunities(refreshed as any);
       } catch (err: any) {
-        console.error('Failed to delete opportunity remote, reverting:', err);
-        setOpportunities(previous);
+        console.error('Failed to delete opportunity remote:', err);
         alert(`Erro ao deletar oportunidade: ${err?.response?.data?.message || err?.message || 'Erro desconhecido'}`);
       }
     })();
