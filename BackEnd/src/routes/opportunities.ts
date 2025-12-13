@@ -12,12 +12,13 @@ router.get('/', requireAuth, identifyTenant, requireTenant, async (_req: any, re
   const tenantId = res.locals.tenantId;
   const items = await prisma.opportunity.findMany({
     where: { tenantId },
-    include: { opportunityTags: { include: { tag: true } } }
+    include: { opportunityTags: { include: { tag: true } }, property: true }
   });
 
   const opportunities = items.map((opp: any) => ({
     ...opp,
-    tags: opp.opportunityTags.map((ot: any) => ot.tag)
+    tags: opp.opportunityTags.map((ot: any) => ot.tag),
+    propertyTitle: opp.property ? opp.property.title : null
   }));
 
   return res.json({ opportunities });
@@ -34,6 +35,7 @@ router.post('/', requireAuth, identifyTenant, requireTenant, async (req: any, re
     const allowed: any = {};
     if (data.leadId !== undefined) allowed.leadId = data.leadId;
     if (data.leadName !== undefined) allowed.leadName = data.leadName;
+    if (data.title !== undefined) allowed.title = data.title;
     if (data.propertyId !== undefined && data.propertyId !== null) allowed.propertyId = data.propertyId;
     if (data.value !== undefined) allowed.value = data.value;
     if (data.probability !== undefined) allowed.probability = data.probability;
@@ -64,9 +66,9 @@ router.post('/', requireAuth, identifyTenant, requireTenant, async (req: any, re
 
     const result = await prisma.opportunity.findUnique({
       where: { id: opp.id },
-      include: { opportunityTags: { include: { tag: true } } }
+      include: { opportunityTags: { include: { tag: true } }, property: true }
     });
-    const opportunityWithTags = result ? { ...result, tags: result.opportunityTags.map((ot: any) => ot.tag) } : null;
+    const opportunityWithTags = result ? { ...result, tags: result.opportunityTags.map((ot: any) => ot.tag), propertyTitle: result.property ? result.property.title : null } : null;
     return res.status(201).json({ message: t(req, 'opportunity.created'), opportunity: opportunityWithTags });
   } catch (err: any) {
     console.error('create opportunity err', err);
@@ -83,6 +85,7 @@ router.put('/:id', requireAuth, identifyTenant, requireTenant, requireOwnership(
     const allowed: any = {};
     if (data.leadId !== undefined) allowed.leadId = data.leadId;
     if (data.leadName !== undefined) allowed.leadName = data.leadName;
+    if (data.title !== undefined) allowed.title = data.title;
     // propertyId can be explicitly set to null to clear relation
     if ('propertyId' in data) allowed.propertyId = data.propertyId;
     if (data.value !== undefined) allowed.value = data.value;
@@ -113,8 +116,8 @@ router.put('/:id', requireAuth, identifyTenant, requireTenant, requireOwnership(
       }
     }
 
-    const result = await prisma.opportunity.findUnique({ where: { id }, include: { opportunityTags: { include: { tag: true } } } });
-    const oppWithTags = result ? { ...result, tags: result.opportunityTags.map((ot: any) => ot.tag) } : null;
+    const result = await prisma.opportunity.findUnique({ where: { id }, include: { opportunityTags: { include: { tag: true } }, property: true } });
+    const oppWithTags = result ? { ...result, tags: result.opportunityTags.map((ot: any) => ot.tag), propertyTitle: result.property ? result.property.title : null } : null;
     return res.json({ message: t(req, 'opportunity.updated'), opportunity: oppWithTags });
   } catch (err: any) {
     console.error('update opportunity err', err);

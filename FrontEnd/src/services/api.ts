@@ -26,10 +26,18 @@ client.interceptors.request.use((cfg) => {
 client.interceptors.response.use(
   response => response,
   error => {
+    const token = getToken();
     if (error.response && error.response.status === 401) {
-      sessionStorage.removeItem('apollo_token');
-      window.location.hash = '/login';
-      alert('Sua sessão expirou. Faça login novamente.');
+      // Only treat as session-expired if we actually had a token —
+      // otherwise it's a normal unauthenticated request (e.g. first load)
+      if (token) {
+        sessionStorage.removeItem('apollo_token');
+        window.location.hash = '/login';
+        alert('Sua sessão expirou. Faça login novamente.');
+      } else {
+        // No token: just reject so the app can show the login screen without an alert
+        return Promise.reject(error);
+      }
     }
     return Promise.reject(error);
   }

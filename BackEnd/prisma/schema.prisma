@@ -247,6 +247,7 @@ model Opportunity {
   leadId       String
   lead         Lead             @relation(fields: [leadId], references: [id])
   leadName     String
+  title        String?
   propertyId   String?
   property     Property?        @relation(fields: [propertyId], references: [id])
   value        Float

@@ -699,7 +699,7 @@ const CRM: React.FC<CRMProps> = ({ defaultView = 'kanban' }) => {
                   id: `opp_${Date.now()}`,
                   leadId: data.leadId,
                   leadName: data.leadName,
-                  propertyTitle: data.propertyTitle,
+                  propertyId: data.propertyId,
                   value: data.value,
                   probability: data.probability,
                   stage: data.stage,
