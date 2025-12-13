@@ -1,153 +1,23 @@
-﻿import React, { useState, useCallback, useEffect } from 'react';
-import { KANBAN_COLUMNS } from '../utils/constants';
-import { Opportunity, OpportunityStage, UserRole, Visit, Tag, User } from '../types/types';
-import { Plus, Calendar, DollarSign, User as UserIcon, X, ChevronDown, ChevronLeft, ChevronRight, Columns, Edit2, Trash2, Clock, MapPin, Check, Bell } from 'lucide-react';
-import { useLanguage } from '../config/i18n';
-import { useData } from '../context/dataContext';
-import { usePermission } from '../context/auth';
-
-// --- Kanban Components ---
-
-const KanbanCard: React.FC<{ 
-  opportunity: Opportunity; 
-  onDragStart: (e: React.DragEvent, id: string) => void;
-  onEdit: (opportunity: Opportunity) => void;
-}> = ({ 
-  opportunity, 
-  onDragStart,
-  onEdit
-}) => {
-  const { t } = useLanguage();
-
-  return (
-    <div
-      draggable
-      onDragStart={(e) => onDragStart(e, opportunity.id)}
-      className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm cursor-move hover:shadow-md transition-all active:cursor-grabbing group relative"
-    >
-      <div className="flex justify-between items-start mb-2">
-        <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-            {opportunity.probability}% {t('crm.prob')}
-        </span>
-        <button 
-            onClick={(e) => { e.stopPropagation(); onEdit(opportunity); }}
-            className="text-gray-400 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity p-1"
-            title={t('common.edit')}
-        >
-            <Edit2 className="w-3.5 h-3.5" />
-        </button>
-      </div>
-      
-      <h4 className="font-semibold text-gray-900 mb-1">{opportunity.leadName}</h4>
-      <p className="text-xs text-gray-500 mb-3 line-clamp-1">{opportunity.propertyTitle || t('crm.general_inquiry')}</p>
-      
-      {/* Tags */}
-      <div className="flex flex-wrap gap-1 mb-3">
-        {opportunity.tags && opportunity.tags.map(tag => (
-            <span 
-                key={tag.id} 
-                className="text-[10px] px-1.5 py-0.5 rounded border"
-                style={{ 
-                    borderColor: `${tag.color}40`, 
-                    backgroundColor: `${tag.color}10`, 
-                    color: tag.color 
-                }}
-            >
-                {tag.label}
-            </span>
-        ))}
-      </div>
-
-      <div className="flex items-center justify-between pt-3 border-t border-gray-50 text-xs text-gray-500">
-        <div className="flex items-center gap-1">
-            <UserIcon className="w-3 h-3" />
-            <span>{t('crm.agent')}</span>
-        </div>
-        <div className="flex items-center gap-1 font-medium text-gray-900">
-            <DollarSign className="w-3 h-3" />
-            {new Intl.NumberFormat('en-US', { notation: "compact", compactDisplay: "short" }).format(opportunity.value)}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const KanbanColumn: React.FC<{ 
-    id: string; 
-    title: string; 
-    color: string; 
-    opportunities: Opportunity[]; 
-    onDrop: (e: React.DragEvent, stage: string) => void;
-    onDragOver: (e: React.DragEvent) => void;
-    onAddClick: () => void;
-    onEdit: (opportunity: Opportunity) => void;
-}> = ({ 
-    id, 
-    title, 
-    color, 
-    opportunities, 
-    onDrop,
-    onDragOver,
-    onAddClick,
-    onEdit
-}) => {
-    const { t } = useLanguage();
-    const totalValue = opportunities.reduce((acc, curr) => acc + curr.value, 0);
-
-    return (
-        <div 
-            className="flex-shrink-0 w-80 flex flex-col h-full max-h-full"
-            onDrop={(e) => onDrop(e, id)}
-            onDragOver={onDragOver}
-        >
-            {/* Header */}
-            <div className={`p-3 rounded-t-lg bg-gray-50 border-t-4 border-l border-r ${color} flex flex-col gap-1`}>
-                <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-gray-700 text-sm uppercase tracking-wide">{t(`crm.stage.${id}`)}</h3>
-                    <span className="text-xs font-medium text-gray-400 bg-gray-200 px-2 py-0.5 rounded-full">{opportunities.length}</span>
-                </div>
-                <p className="text-xs text-gray-500 font-medium">
-                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(totalValue)}
-                </p>
-            </div>
-
-            {/* Droppable Area */}
-            <div className="flex-1 bg-gray-100/50 p-2 border-x border-b border-gray-200 rounded-b-lg overflow-y-auto space-y-2 kanban-scroll min-h-[150px]">
-                {opportunities.map(opp => (
-                    <KanbanCard 
-                        key={opp.id} 
-                        opportunity={opp} 
-                        onDragStart={(e, id) => e.dataTransfer.setData('opportunityId', id)}
-                        onEdit={onEdit}
-                    />
-                ))}
-                
-                {opportunities.length === 0 && (
-                    <div className="h-24 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center text-gray-400 text-xs">
-                        {t('crm.drop_items')}
-                    </div>
-                )}
-            </div>
-            
-            <button 
-              onClick={onAddClick}
-              className="mt-2 flex items-center justify-center gap-1 py-2 text-sm text-gray-500 hover:text-indigo-600 hover:bg-gray-50 rounded-lg border border-transparent hover:border-gray-200 transition-all"
-            >
-                <Plus className="w-4 h-4" />
-                {t('crm.add_opportunity')}
-            </button>
-        </div>
-    );
-};
-
-// --- Deal Modal Component ---
-
+﻿import KanbanColumn from '../components/KanbanColumn';
 interface DealFormModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSubmit: (data: Partial<Opportunity>) => void;
     initialData?: Opportunity;
 }
+import React, { useState, useCallback, useEffect } from 'react';
+import { KANBAN_COLUMNS } from '../utils/constants';
+import { Opportunity, OpportunityStage, UserRole, Visit, Tag, User } from '../types/types';
+import { Plus, Calendar, DollarSign, User as UserIcon, X, ChevronDown, ChevronLeft, ChevronRight, Columns, Edit2, Trash2, Clock, MapPin, Check, Bell, Tag as TagIcon } from 'lucide-react';
+import { useLanguage } from '../config/i18n';
+import { useData } from '../context/dataContext';
+import { usePermission, Can } from '../context/auth';
+import { useToast } from '../context/toastContext';
+import TagsManagerModal from '../components/TagsManagerModal';
+
+// --- Kanban Components ---
+
+
 
 const DealFormModal: React.FC<DealFormModalProps> = ({ isOpen, onClose, onSubmit, initialData }) => {
     const { t } = useLanguage();
@@ -337,7 +207,7 @@ const DealFormModal: React.FC<DealFormModalProps> = ({ isOpen, onClose, onSubmit
                              </div>
                         </div>
 
-                         <div className="md:col-span-2">
+                        <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-gray-700 mb-2">{t('crm.form.tags')}</label>
                             <div className="flex flex-wrap gap-2">
                                 {tags.length === 0 && <p className="text-xs text-gray-400">Nenhuma tag criada.</p>}
@@ -361,6 +231,7 @@ const DealFormModal: React.FC<DealFormModalProps> = ({ isOpen, onClose, onSubmit
                                     );
                                 })}
                             </div>
+                            {/* Tags não são obrigatórias */}
                         </div>
                     </div>
                     
@@ -557,10 +428,10 @@ const CalendarEvent: React.FC<{ visit: Visit; onEdit: (v: Visit) => void; onDele
         <div className="group border border-gray-200 rounded-lg p-3 bg-white shadow-sm hover:shadow-md transition-all">
             <div className="flex items-start justify-between gap-2">
                 <div>
-                    <p className="text-xs text-gray-500">{t('visit.at', { time: new Date(visit.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) })}</p>
+                    <p className="text-xs text-gray-500">{t('visit.at') + ': ' + new Date(visit.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                     <p className="font-semibold text-gray-900">{visit.leadName}</p>
                     {visit.propertyTitle && <p className="text-sm text-gray-500">{visit.propertyTitle}</p>}
-                    {broker && <p className="text-xs text-gray-500">{t('visit.with_agent', { name: broker.name })}</p>}
+                    {broker && <p className="text-xs text-gray-500">{t('visit.with_agent') + ': ' + broker.name}</p>}
                 </div>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={() => onEdit(visit)} className="p-1 text-gray-400 hover:text-indigo-600">
@@ -780,11 +651,14 @@ interface CRMProps {
 }
 
 const CRM: React.FC<CRMProps> = ({ defaultView = 'kanban' }) => {
-  const { 
-    opportunities, addOpportunity, updateOpportunity, 
-    visits, addVisit, updateVisit, deleteVisit
-  } = useData();
+    const [isTagsManagerOpen, setIsTagsManagerOpen] = useState(false);
+    const { 
+        opportunities, addOpportunity, updateOpportunity, 
+        visits, addVisit, updateVisit, deleteVisit,
+        tags, addTag, updateTag, deleteTag
+    } = useData();
   const { user } = usePermission();
+  const toast = useToast();
   
   const [isDealModalOpen, setIsDealModalOpen] = useState(false);
   const [editingOpportunity, setEditingOpportunity] = useState<Opportunity | undefined>(undefined);
@@ -813,23 +687,29 @@ const CRM: React.FC<CRMProps> = ({ defaultView = 'kanban' }) => {
   }, [opportunities, updateOpportunity]);
 
   const handleSaveDeal = (data: Partial<Opportunity>) => {
-      if (editingOpportunity) {
-          updateOpportunity({ ...editingOpportunity, ...data } as Opportunity);
-          setEditingOpportunity(undefined);
-      } else {
-          const newDeal: Partial<Opportunity> = {
-              id: `opp_${Date.now()}`,
-              leadId: data.leadId,
-              leadName: data.leadName,
-              propertyTitle: data.propertyTitle,
-              value: data.value,
-              probability: data.probability,
-              stage: data.stage,
-              tags: data.tags, 
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString()
-          };
-          addOpportunity(newDeal as Opportunity);
+      try {
+          if (editingOpportunity) {
+              updateOpportunity({ ...editingOpportunity, ...data } as Opportunity);
+              toast.success(t('crm.deal_updated') || 'Oportunidade atualizada com sucesso!');
+              setEditingOpportunity(undefined);
+          } else {
+              const newDeal: Partial<Opportunity> = {
+                  id: `opp_${Date.now()}`,
+                  leadId: data.leadId,
+                  leadName: data.leadName,
+                  propertyTitle: data.propertyTitle,
+                  value: data.value,
+                  probability: data.probability,
+                  stage: data.stage,
+                  tags: data.tags, 
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString()
+              };
+              addOpportunity(newDeal as Opportunity);
+              toast.success(t('crm.deal_created') || 'Oportunidade criada com sucesso!');
+          }
+      } catch (error: any) {
+          toast.error(error.message || 'Erro ao salvar oportunidade.');
       }
   };
 
@@ -887,29 +767,48 @@ const CRM: React.FC<CRMProps> = ({ defaultView = 'kanban' }) => {
           <h1 className="text-2xl font-bold text-gray-900">{t('crm.title')}</h1>
           <p className="text-gray-500 text-sm">{t('crm.subtitle')}</p>
         </div>
-        <div className="flex gap-3">
-             <button 
-                onClick={() => setViewMode(viewMode === 'kanban' ? 'calendar' : 'kanban')}
-                className={`flex items-center gap-2 px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${
-                    viewMode === 'calendar' 
-                    ? 'bg-indigo-50 border-indigo-200 text-indigo-700' 
-                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                }`}
-             >
-                {viewMode === 'kanban' ? <Calendar className="w-4 h-4" /> : <Columns className="w-4 h-4" />}
-                {viewMode === 'kanban' ? t('crm.calendar') : t('crm.kanban')}
-             </button>
-             
-             {viewMode === 'kanban' && (
-                <button 
-                    onClick={openNewDealModal}
-                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-sm text-sm font-medium"
-                >
-                    <Plus className="w-4 h-4" />
-                    {t('crm.new_deal')}
-                </button>
-             )}
-        </div>
+                <div className="flex gap-3">
+                    <button 
+                        onClick={() => setViewMode(viewMode === 'kanban' ? 'calendar' : 'kanban')}
+                        className={`flex items-center gap-2 px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${
+                                viewMode === 'calendar' 
+                                ? 'bg-indigo-50 border-indigo-200 text-indigo-700' 
+                                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                        }`}
+                    >
+                        {viewMode === 'kanban' ? <Calendar className="w-4 h-4" /> : <Columns className="w-4 h-4" />}
+                        {viewMode === 'kanban' ? t('crm.calendar') : t('crm.kanban')}
+                    </button>
+                    {viewMode === 'kanban' && (
+                        <>
+                            <button 
+                                onClick={openNewDealModal}
+                                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-sm text-sm font-medium"
+                            >
+                                <Plus className="w-4 h-4" />
+                                {t('crm.new_deal')}
+                            </button>
+                            <Can permission="settings.manage">
+                                <button
+                                    onClick={() => setIsTagsManagerOpen(true)}
+                                    className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 shadow-sm text-sm font-medium"
+                                    title={t('leads.manage_tags') || 'Gerenciar Etiquetas'}
+                                >
+                                    <TagIcon className="w-4 h-4" />
+                                    {t('leads.manage_tags') || 'Etiquetas'}
+                                </button>
+                            </Can>
+                        </>
+                    )}
+                </div>
+                <TagsManagerModal
+                    isOpen={isTagsManagerOpen}
+                    onClose={() => setIsTagsManagerOpen(false)}
+                    tags={tags}
+                    onAdd={addTag}
+                    onUpdate={updateTag}
+                    onDelete={deleteTag}
+                />
       </div>
 
       {viewMode === 'kanban' ? (

@@ -16,9 +16,24 @@ client.interceptors.request.use((cfg) => {
   const token = getToken();
   if (token) cfg.headers = { ...cfg.headers, Authorization: `Bearer ${token}` };
   const tenant = getTenant();
+  console.log('📡 [API Interceptor] Tenant ID:', tenant);
+  console.log('📡 [API Interceptor] Request URL:', cfg.url);
   if (tenant) cfg.headers = { ...cfg.headers, 'x-tenant-id': tenant };
   return cfg;
 });
+
+// Interceptor de resposta para tratar erro 401 (token expirado ou inválido)
+client.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response && error.response.status === 401) {
+      sessionStorage.removeItem('apollo_token');
+      window.location.hash = '/login';
+      alert('Sua sessão expirou. Faça login novamente.');
+    }
+    return Promise.reject(error);
+  }
+);
 
 export const api = {
   // Auth
@@ -100,6 +115,24 @@ export const api = {
   },
   deleteInteraction: async (id: string) => {
     const resp = await client.delete(`/interactions/${id}`);
+    return resp.data;
+  },
+
+  // Opportunities
+  listOpportunities: async () => {
+    const resp = await client.get('/opportunities');
+    return resp.data.opportunities || [];
+  },
+  createOpportunity: async (payload: any) => {
+    const resp = await client.post('/opportunities', payload);
+    return resp.data.opportunity;
+  },
+  updateOpportunity: async (id: string, payload: any) => {
+    const resp = await client.put(`/opportunities/${id}`, payload);
+    return resp.data.opportunity;
+  },
+  deleteOpportunity: async (id: string) => {
+    const resp = await client.delete(`/opportunities/${id}`);
     return resp.data;
   },
 

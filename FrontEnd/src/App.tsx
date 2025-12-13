@@ -45,6 +45,7 @@ import { Tenant, UserRole } from './types/types';
 import { LanguageProvider, useLanguage } from './config/i18n';
 import { AuthProvider, usePermission } from './context/auth';
 import { DataProvider, useData } from './context/dataContext';
+import { ToastProvider } from './context/toastContext';
 
 // --- Components ---
 
@@ -327,16 +328,18 @@ const App = () => {
       <AuthProvider>
         <HashRouter>
           <DataProvider>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/maintenance" element={<MaintenancePage />} />
-              <Route path="/*" element={
-                <ProtectedRoute>
-                  <ProtectedLayout />
-                </ProtectedRoute>
-              } />
-            </Routes>
+            <ToastProvider>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/maintenance" element={<MaintenancePage />} />
+                <Route path="/*" element={
+                  <ProtectedRoute>
+                    <ProtectedLayout />
+                  </ProtectedRoute>
+                } />
+              </Routes>
+            </ToastProvider>
           </DataProvider>
         </HashRouter>
       </AuthProvider>

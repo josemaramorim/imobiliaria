@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Tenant, SubscriptionPlan, Invoice, PaymentGateway, PaymentGatewayId } from '../../types/types';
 import { useData } from '../../context/dataContext';
 import { useLanguage } from '../../config/i18n';
+import { useToast } from '../../context/toastContext';
 import { Building2, Plus, Search, MoreVertical, Edit2, Trash2, ExternalLink, FileText, CheckCircle, XCircle, CreditCard, AlertTriangle, RefreshCw, Calendar, Check, Eye, EyeOff } from 'lucide-react';
 
 // Import modals from SaaSAdmin
@@ -278,6 +279,7 @@ const TenantFormModal = ({ isOpen, onClose, onSubmit, plans, paymentGateways, in
 const AdminTenants = () => {
     const { t } = useLanguage();
     const { tenants, plans, paymentGateways, switchTenant, addTenant, updateTenant, deleteTenant, allInvoices, markInvoiceAsPaid } = useData();
+    const toast = useToast();
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
     
@@ -291,9 +293,6 @@ const AdminTenants = () => {
     // Dropdown state
     const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
-    
-    // Toast notification state
-    const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -335,17 +334,9 @@ const AdminTenants = () => {
         try {
             const newStatus = tenant.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
             await updateTenant({ ...tenant, status: newStatus });
-            setNotification({ 
-                type: 'success', 
-                message: `Tenant ${newStatus === 'ACTIVE' ? 'ativado' : 'inativado'} com sucesso!` 
-            });
-            setTimeout(() => setNotification(null), 3000);
+            toast.success(`Tenant ${newStatus === 'ACTIVE' ? 'ativado' : 'inativado'} com sucesso!`);
         } catch (error: any) {
-            setNotification({ 
-                type: 'error', 
-                message: error.response?.data?.message || 'Erro ao alterar status do tenant.' 
-            });
-            setTimeout(() => setNotification(null), 5000);
+            toast.error(error.response?.data?.message || 'Erro ao alterar status do tenant.');
         }
     };
 
@@ -364,26 +355,18 @@ const AdminTenants = () => {
                 const updatedTenant = { ...editingTenant, ...data } as Tenant;
                 console.log('🔵 [AdminTenants] Calling updateTenant with:', updatedTenant);
                 await updateTenant(updatedTenant);
-                setNotification({ type: 'success', message: 'Tenant atualizado com sucesso!' });
+                toast.success('Tenant atualizado com sucesso!');
             } else {
                 const { trialDuration, ...tenantData } = data;
                 console.log('🔵 [AdminTenants] Calling addTenant with:', tenantData, trialDuration);
                 await addTenant(tenantData as any, trialDuration || 14);
-                setNotification({ type: 'success', message: 'Tenant criado com sucesso!' });
+                toast.success('Tenant criado com sucesso!');
             }
             setIsTenantModalOpen(false);
             setEditingTenant(undefined);
-            
-            // Auto-hide notification after 3 seconds
-            setTimeout(() => setNotification(null), 3000);
         } catch (error: any) {
             console.error('❌ [AdminTenants] Error submitting tenant:', error);
-            setNotification({ 
-                type: 'error', 
-                message: error.response?.data?.message || error.message || 'Erro ao salvar tenant. Tente novamente.' 
-            });
-            // Keep error visible longer
-            setTimeout(() => setNotification(null), 5000);
+            toast.error(error.response?.data?.message || error.message || 'Erro ao salvar tenant. Tente novamente.');
         }
     };
 
@@ -391,59 +374,16 @@ const AdminTenants = () => {
         if (tenantToDelete) {
             try {
                 deleteTenant(tenantToDelete.id);
-                setNotification({ type: 'success', message: 'Tenant excluído com sucesso!' });
+                toast.success('Tenant excluído com sucesso!');
                 setTenantToDelete(null);
-                setTimeout(() => setNotification(null), 3000);
             } catch (error: any) {
-                setNotification({ 
-                    type: 'error', 
-                    message: error.response?.data?.message || 'Erro ao excluir tenant.' 
-                });
-                setTimeout(() => setNotification(null), 5000);
+                toast.error(error.response?.data?.message || 'Erro ao excluir tenant.');
             }
         }
     };
 
     return (
         <div className="p-8">
-            {/* Notification Toast */}
-            {notification && (
-                <div 
-                    className={`fixed top-4 right-4 z-[200] px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 ${
-                        notification.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-                    }`}
-                    style={{
-                        animation: 'slideInRight 0.3s ease-out'
-                    }}
-                >
-                    {notification.type === 'success' ? (
-                        <CheckCircle className="w-5 h-5" />
-                    ) : (
-                        <AlertTriangle className="w-5 h-5" />
-                    )}
-                    <span className="font-medium">{notification.message}</span>
-                    <button 
-                        onClick={() => setNotification(null)}
-                        className="ml-2 hover:opacity-80"
-                    >
-                        <XCircle className="w-4 h-4" />
-                    </button>
-                </div>
-            )}
-            
-            <style>{`
-                @keyframes slideInRight {
-                    from {
-                        transform: translateX(400px);
-                        opacity: 0;
-                    }
-                    to {
-                        transform: translateX(0);
-                        opacity: 1;
-                    }
-                }
-            `}</style>
-            
             {/* Header */}
             <div className="flex justify-between items-center mb-6">
                 <div>

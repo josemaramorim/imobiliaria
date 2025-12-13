@@ -162,34 +162,51 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
       return;
     }
 
-    console.log('📊 [DataContext] Carregando dados tenant-scoped... user.tenantId:', user.tenantId, 'activeTenantId:', activeTenantId);
+    console.log('📊 [DataContext] Carregando dados tenant-scoped...');
+    console.log('📊 [DataContext] user.tenantId:', user.tenantId);
+    console.log('📊 [DataContext] activeTenantId:', activeTenantId);
+    console.log('📊 [DataContext] sessionStorage apollo_current_tenant:', sessionStorage.getItem('apollo_current_tenant'));
 
     (async () => {
       try {
         const { api } = await import('../services/api');
-        // list properties
+        
+        console.log('📊 [DataContext] Carregando properties...');
         const props = await api.listProperties();
+        console.log('📊 [DataContext] Properties recebidas:', props);
         if (Array.isArray(props)) setProperties(props as any);
-        // list leads
+        
+        console.log('📊 [DataContext] Carregando leads...');
         const lds = await api.listLeads();
+        console.log('📊 [DataContext] Leads recebidos:', lds);
         if (Array.isArray(lds)) setLeads(lds as any);
-        // list visits
+        
+        console.log('📊 [DataContext] Carregando visits...');
         const vsts = await api.listVisits();
+        console.log('📊 [DataContext] Visits recebidas:', vsts);
         if (Array.isArray(vsts)) setVisits(vsts as any);
-        // list tags
+        
+        console.log('📊 [DataContext] Carregando tags...');
         const tgs = await api.listTags();
+        console.log('📊 [DataContext] Tags recebidas:', tgs);
         if (Array.isArray(tgs)) setTags(tgs as any);
+        
         try {
+          console.log('📊 [DataContext] Carregando custom fields...');
           const propFields = await api.listCustomFields('PROPERTY');
+          console.log('📊 [DataContext] Property fields:', propFields);
           if (Array.isArray(propFields)) setPropertyCustomFields(propFields as any);
+          
           const leadFields = await api.listCustomFields('LEAD');
+          console.log('📊 [DataContext] Lead fields:', leadFields);
           if (Array.isArray(leadFields)) setLeadCustomFields(leadFields as any);
         } catch (fieldErr) {
-          console.warn('Failed to fetch custom fields, keeping local state', fieldErr);
+          console.warn('❌ [DataContext] Failed to fetch custom fields:', fieldErr);
         }
+        
+        console.log('✅ [DataContext] Todos os dados carregados com sucesso!');
       } catch (err) {
-        // keep local mocks if backend calls fail
-        console.warn('Backend fetch failed, continuing with local state', err);
+        console.error('❌ [DataContext] Backend fetch failed:', err);
       }
     })();
   }, [token, activeTenantId, user?.tenantId]);
@@ -733,9 +750,70 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     })();
   };
 
-  const addOpportunity = (opp: Opportunity) => setOpportunities(p => [{ ...opp, tenantId: currentTenant.id }, ...p]);
-  const updateOpportunity = (opp: Opportunity) => setOpportunities(p => p.map(o => o.id === opp.id ? opp : o));
-  const deleteOpportunity = (id: string) => setOpportunities(p => p.filter(o => o.id !== id));
+  const addOpportunity = (opp: Opportunity) => {
+    const previous = opportunities;
+    // Optimistic update: prepend locally
+    setOpportunities(p => [{ ...opp, tenantId: currentTenant.id }, ...p]);
+
+    const token = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
+    if (!token) return;
+
+    (async () => {
+      try {
+        const { api } = await import('../services/api');
+        // Ensure we send tenantId in payload so backend validation (zod) passes
+        const payload = { ...opp, tenantId: currentTenant.id };
+        const created = await api.createOpportunity(payload);
+        if (created) {
+          // replace optimistic item with server-provided one
+          setOpportunities(prev => [created, ...prev.filter(p => p.id !== created.id)]);
+        } else {
+          // refresh list if create didn't return created object
+          const all = await api.listOpportunities();
+          setOpportunities(Array.isArray(all) ? all : previous);
+        }
+      } catch (err: any) {
+        console.error('Failed to create opportunity remote:', err);
+        setOpportunities(previous); // rollback
+        alert(`Erro ao criar oportunidade: ${err?.response?.data?.message || err?.message || 'Erro desconhecido'}`);
+      }
+    })();
+  };
+
+  const updateOpportunity = (opp: Opportunity) => {
+    const previous = opportunities;
+    setOpportunities(p => p.map(o => o.id === opp.id ? opp : o));
+    const token = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
+    if (!token) return;
+    (async () => {
+      try {
+        const { api } = await import('../services/api');
+        const updated = await api.updateOpportunity(opp.id, opp);
+        if (updated) setOpportunities(prev => prev.map(o => o.id === opp.id ? updated : o));
+      } catch (err: any) {
+        console.error('Failed to update opportunity remote:', err);
+        setOpportunities(previous);
+        alert(`Erro ao atualizar oportunidade: ${err?.response?.data?.message || err?.message || 'Erro desconhecido'}`);
+      }
+    })();
+  };
+
+  const deleteOpportunity = (id: string) => {
+    const previous = opportunities;
+    setOpportunities(p => p.filter(o => o.id !== id));
+    const token = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
+    if (!token) return;
+    (async () => {
+      try {
+        const { api } = await import('../services/api');
+        await api.deleteOpportunity(id);
+      } catch (err: any) {
+        console.error('Failed to delete opportunity remote, reverting:', err);
+        setOpportunities(previous);
+        alert(`Erro ao deletar oportunidade: ${err?.response?.data?.message || err?.message || 'Erro desconhecido'}`);
+      }
+    })();
+  };
 
   const addTeamMember = (user: User) => {
     // Optimistic update
