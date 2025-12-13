@@ -109,14 +109,17 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
       sessionStorage.setItem('apollo_session_user', JSON.stringify(resp.user));
       console.log('🔐 [AuthProvider] Token salvo:', resp.token.substring(0, 20) + '...');
 
+      // Atualiza o estado do usuário ANTES de redirecionar para evitar race-conditions
+      setUser(resp.user);
+
       if (resp.user && (resp.user as any).tenantId) {
         sessionStorage.setItem('apollo_current_tenant', (resp.user as any).tenantId);
       } else if (resp.user && resp.user.role === UserRole.SUPER_ADMIN) {
-        // Super Admin não tem tenant, redireciona para página de administração
+        // Super Admin não tem tenant; remover qualquer tenant atual e redirecionar
         sessionStorage.removeItem('apollo_current_tenant');
-        window.location.hash = '#/admin/tenants';
+        // Use setTimeout 0 para garantir que o React aplique o setUser antes do hash change
+        setTimeout(() => { window.location.hash = '#/admin/tenants'; }, 0);
       }
-      setUser(resp.user);
     } catch (err) {
       console.error('🔐 [AuthProvider] Erro no login:', err);
       throw err;

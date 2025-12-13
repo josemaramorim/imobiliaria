@@ -5,6 +5,7 @@ import { User, UserRole } from '../types/types';
 import { Mail, Phone, Plus, CheckCircle, XCircle, TrendingUp, DollarSign, Target, X, Edit2, Trash2, User as UserIcon, Shield, Briefcase, Search, LayoutGrid, List as ListIcon, AlertTriangle } from 'lucide-react';
 import { useLanguage } from '../config/i18n';
 import { Can, usePermission } from '../context/auth';
+import { useToast } from '../context/toastContext';
 
 // --- Delete Confirmation Modal ---
 interface DeleteConfirmationModalProps {
@@ -245,6 +246,7 @@ const Team = () => {
     const { t } = useLanguage();
     const { team, addTeamMember, updateTeamMember, deleteTeamMember } = useData();
     const { user, hasPermission } = usePermission();
+    const toast = useToast();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingMember, setEditingMember] = useState<User | null>(null);
@@ -283,23 +285,29 @@ const Team = () => {
     };
 
     const handleCreateOrUpdate = (data: Partial<User>) => {
-        if (editingMember) {
-            updateTeamMember({ ...editingMember, ...data } as User);
-        } else {
-            const newUser: User = {
-                id: `usr_${Date.now()}`,
-                name: data.name || 'Unknown',
-                email: data.email || '',
-                phone: data.phone,
-                role: data.role || UserRole.BROKER,
-                status: data.status || 'ACTIVE',
-                avatarUrl: `https://ui-avatars.com/api/?name=${data.name}&background=random`,
-                tenantId: user?.tenantId
-            };
-            addTeamMember(newUser);
+        try {
+            if (editingMember) {
+                updateTeamMember({ ...editingMember, ...data } as User);
+                toast.success(t('team.updated_success') || 'Membro atualizado com sucesso!');
+            } else {
+                const newUser: User = {
+                    id: `usr_${Date.now()}`,
+                    name: data.name || 'Unknown',
+                    email: data.email || '',
+                    phone: data.phone,
+                    role: data.role || UserRole.BROKER,
+                    status: data.status || 'ACTIVE',
+                    avatarUrl: `https://ui-avatars.com/api/?name=${data.name}&background=random`,
+                    tenantId: user?.tenantId
+                };
+                addTeamMember(newUser);
+                toast.success(t('team.created_success') || 'Membro adicionado com sucesso!');
+            }
+            setIsModalOpen(false);
+            setEditingMember(null);
+        } catch (error: any) {
+            toast.error(error.message || 'Erro ao salvar membro da equipe.');
         }
-        setIsModalOpen(false);
-        setEditingMember(null);
     };
 
     const handleEditClick = (member: User) => {
@@ -314,9 +322,14 @@ const Team = () => {
 
     const executeDelete = () => {
         if (memberToDelete) {
-            deleteTeamMember(memberToDelete.id);
-            setMemberToDelete(null);
-            setIsDeleteModalOpen(false);
+            try {
+                deleteTeamMember(memberToDelete.id);
+                toast.success(t('team.deleted_success') || 'Membro excluído com sucesso!');
+                setMemberToDelete(null);
+                setIsDeleteModalOpen(false);
+            } catch (error: any) {
+                toast.error(error.message || 'Erro ao excluir membro.');
+            }
         }
     };
 
