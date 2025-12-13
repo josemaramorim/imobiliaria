@@ -1,5 +1,6 @@
 import React from 'react';
 import { Opportunity, OpportunityStage, Tag } from '../types/types';
+import { Edit2 } from 'lucide-react';
 
 interface KanbanColumnProps {
   id: string;
@@ -25,14 +26,20 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
       onDragOver={onDragOver}
       onDrop={e => onDrop(e, id)}
     >
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-white/60 to-gray-50">
-        <div>
-          <h3 className="font-bold text-gray-800 text-lg">{title}</h3>
-          <div className="text-xs text-gray-500">{opportunities.length} {opportunities.length === 1 ? 'card' : 'cards'}</div>
+      <div className="relative">
+        <div style={{ height: 6, backgroundColor: color }} className="rounded-t-xl"></div>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-white">
+          <div>
+            <h3 className="font-bold text-gray-800 text-lg uppercase tracking-wide">{title}</h3>
+            <div className="text-xs text-gray-500">{opportunities.length} {opportunities.length === 1 ? 'card' : 'cards'}</div>
+          </div>
+          <div className="flex flex-col items-end">
+            <div className="text-sm font-semibold text-gray-800">{formattedTotal}</div>
+            <button onClick={onAddClick} className="mt-2 inline-flex items-center justify-center w-8 h-8 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">+</button>
+          </div>
         </div>
-        <div className="flex flex-col items-end">
-          <div className="text-sm font-semibold text-gray-800">{formattedTotal}</div>
-          <button onClick={onAddClick} className="mt-2 inline-flex items-center justify-center w-8 h-8 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">+</button>
+        <div className="absolute -top-2 right-4">
+          <div style={{ backgroundColor: color }} className="text-xs text-white px-2 py-0.5 rounded-full font-medium">{opportunities.length}</div>
         </div>
       </div>
 
@@ -40,11 +47,20 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
         {opportunities.map(opp => (
           <div
             key={opp.id}
-            className="bg-white border border-gray-100 rounded-lg p-3 shadow-sm hover:shadow-md cursor-pointer transition-shadow"
+            className="relative bg-white border border-gray-100 rounded-lg p-3 shadow-sm hover:shadow-md cursor-grab transition-shadow"
             onClick={() => onEdit(opp)}
             draggable
-            onDragStart={e => e.dataTransfer.setData('opportunityId', opp.id)}
+            onDragStart={e => { e.dataTransfer.setData('opportunityId', opp.id); (e.currentTarget as HTMLElement).classList.add('cursor-grabbing'); }}
+            onDragEnd={e => { (e.currentTarget as HTMLElement).classList.remove('cursor-grabbing'); }}
           >
+            {/* probability badge */}
+            <div className="absolute left-3 -top-3">
+              <div className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-md font-medium">{opp.probability ?? 0}% Prob.</div>
+            </div>
+            {/* edit icon */}
+            <button onClick={(e) => { e.stopPropagation(); onEdit(opp); }} className="absolute right-3 top-3 opacity-0 hover:opacity-100 transition-opacity bg-white rounded p-1">
+              <Edit2 className="w-4 h-4 text-gray-500" />
+            </button>
             <div className="flex justify-between items-start">
               <div className="flex-1 pr-2">
                 <div className="font-semibold text-gray-800 text-sm line-clamp-1">{opp.propertyTitle || opp.leadName || 'Sem título'}</div>
