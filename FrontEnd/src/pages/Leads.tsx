@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useData } from '../context/dataContext';
 import { useLanguage } from '../config/i18n';
+import { useToast } from '../context/toastContext';
 import { Lead, Tag, CustomFieldConfig, CustomFieldType, Interaction, InteractionType } from '../types/types';
 import { Can, usePermission } from '../context/auth';
 import { Search, Plus, Filter, Mail, Phone, Tag as TagIcon, MoreHorizontal, Edit2, Trash2, X, Check, Settings, Palette, User, CheckCircle, XCircle, SlidersHorizontal, ChevronDown, Square, CheckSquare, List, AlertTriangle, Eye, MessageSquare, Calendar, FileText, Clock, Send, Save, RotateCcw } from 'lucide-react';
@@ -1266,6 +1267,7 @@ const Leads = () => {
     const { t } = useLanguage();
     const { leads, addLead, updateLead, deleteLead, tags, addTag, updateTag, deleteTag, leadCustomFields, updateLeadCustomFields } = useData();
     const { hasPermission } = usePermission();
+    const toast = useToast();
 
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -1289,26 +1291,32 @@ const Leads = () => {
     });
 
     const handleCreateLead = (data: Partial<Lead>) => {
-        if (editingLead) {
-            updateLead({ ...editingLead, ...data } as Lead);
-        } else {
-            const newLead: Partial<Lead> = {
-                id: `lead_${Date.now()}`,
-                name: data.name,
-                email: data.email,
-                phone: data.phone,
-                source: data.source,
-                status: data.status,
-                isActive: data.isActive,
-                tags: data.tags,
-                customValues: data.customValues,
-                interactions: [],
-                createdAt: new Date().toISOString()
-            };
-            addLead(newLead as Lead);
+        try {
+            if (editingLead) {
+                updateLead({ ...editingLead, ...data } as Lead);
+                toast.success(t('leads.updated_success') || 'Lead atualizado com sucesso!');
+            } else {
+                const newLead: Partial<Lead> = {
+                    id: `lead_${Date.now()}`,
+                    name: data.name,
+                    email: data.email,
+                    phone: data.phone,
+                    source: data.source,
+                    status: data.status,
+                    isActive: data.isActive,
+                    tags: data.tags,
+                    customValues: data.customValues,
+                    interactions: [],
+                    createdAt: new Date().toISOString()
+                };
+                addLead(newLead as Lead);
+                toast.success(t('leads.created_success') || 'Lead criado com sucesso!');
+            }
+            setIsFormOpen(false);
+            setEditingLead(undefined);
+        } catch (error: any) {
+            toast.error(error.message || 'Erro ao salvar lead.');
         }
-        setIsFormOpen(false);
-        setEditingLead(undefined);
     };
 
     const confirmDeleteLead = (lead: Lead) => {
@@ -1318,12 +1326,17 @@ const Leads = () => {
 
     const executeDeleteLead = () => {
         if (leadToDelete) {
-            deleteLead(leadToDelete.id);
-            setLeadToDelete(null);
-            setIsDeleteModalOpen(false);
-            if (selectedLead?.id === leadToDelete.id) {
-                setIsDetailsOpen(false);
-                setSelectedLead(null);
+            try {
+                deleteLead(leadToDelete.id);
+                toast.success(t('leads.deleted_success') || 'Lead excluído com sucesso!');
+                setLeadToDelete(null);
+                setIsDeleteModalOpen(false);
+                if (selectedLead?.id === leadToDelete.id) {
+                    setIsDetailsOpen(false);
+                    setSelectedLead(null);
+                }
+            } catch (error: any) {
+                toast.error(error.message || 'Erro ao excluir lead.');
             }
         }
     };

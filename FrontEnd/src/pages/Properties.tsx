@@ -4,6 +4,7 @@ import { MapPin, Bed, Bath, Expand, Filter, Plus, X, Upload, Image as ImageIcon,
 import { useLanguage } from '../config/i18n';
 import { Can, usePermission } from '../context/auth';
 import { useData } from '../context/dataContext';
+import { useToast } from '../context/toastContext';
 
 // --- Helper Components ---
 
@@ -1076,6 +1077,7 @@ const Properties = () => {
     const { t } = useLanguage();
     const { user } = usePermission();
     const { properties, addProperty, updateProperty, deleteProperty, propertyCustomFields, updatePropertyCustomFields } = useData();
+    const toast = useToast();
 
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isFieldsManagerOpen, setIsFieldsManagerOpen] = useState(false);
@@ -1096,26 +1098,37 @@ const Properties = () => {
     });
 
     const handleCreateProperty = (data: Partial<Property>) => {
-        if (editingProperty) {
-            updateProperty({ ...editingProperty, ...data } as Property);
-            setEditingProperty(undefined);
-        } else {
-            const newProp: Partial<Property> = {
-                ...data,
-                id: `prop_${Date.now()}`,
-                agentId: data.agentId || user?.id,
-                images: data.images || []
-            };
-            addProperty(newProp as Property);
+        try {
+            if (editingProperty) {
+                updateProperty({ ...editingProperty, ...data } as Property);
+                toast.success(t('properties.updated_success') || 'Propriedade atualizada com sucesso!');
+                setEditingProperty(undefined);
+            } else {
+                const newProp: Partial<Property> = {
+                    ...data,
+                    id: `prop_${Date.now()}`,
+                    agentId: data.agentId || user?.id,
+                    images: data.images || []
+                };
+                addProperty(newProp as Property);
+                toast.success(t('properties.created_success') || 'Propriedade criada com sucesso!');
+            }
+            setIsFormOpen(false);
+        } catch (error: any) {
+            toast.error(error.message || 'Erro ao salvar propriedade.');
         }
-        setIsFormOpen(false);
     };
 
     const handleDeleteProperty = () => {
         if (deletingPropertyId) {
-            deleteProperty(deletingPropertyId);
-            setDeletingPropertyId(null);
-            setIsDeleteModalOpen(false);
+            try {
+                deleteProperty(deletingPropertyId);
+                toast.success(t('properties.deleted_success') || 'Propriedade excluída com sucesso!');
+                setDeletingPropertyId(null);
+                setIsDeleteModalOpen(false);
+            } catch (error: any) {
+                toast.error(error.message || 'Erro ao excluir propriedade.');
+            }
         }
     };
 

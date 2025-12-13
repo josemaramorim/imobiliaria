@@ -57,6 +57,7 @@ export const leadSchema = z.object({
 export const opportunitySchema = z.object({
   leadId: z.string().min(1),
   leadName: z.string().min(1),
+  title: z.string().optional(),
   propertyId: z.string().optional(),
   propertyTitle: z.string().optional(),
   value: z.number().nonnegative(),

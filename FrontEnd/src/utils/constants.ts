@@ -28,11 +28,11 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
 };
 
 export const KANBAN_COLUMNS = [
-  { id: OpportunityStage.NEW, title: 'Novo', color: 'border-gray-400' },
-  { id: OpportunityStage.QUALIFIED, title: 'Qualificado', color: 'border-sky-400' },
-  { id: OpportunityStage.VISIT_SCHEDULED, title: 'Visita Agendada', color: 'border-blue-400' },
-  { id: OpportunityStage.PROPOSAL, title: 'Proposta', color: 'border-yellow-400' },
-  { id: OpportunityStage.NEGOTIATION, title: 'Negociação', color: 'border-purple-400' },
-  { id: OpportunityStage.CLOSED_WON, title: 'Ganho', color: 'border-green-400' },
-  { id: OpportunityStage.CLOSED_LOST, title: 'Perdido', color: 'border-red-400' },
+  { id: OpportunityStage.NEW, title: 'Novo', color: '#9CA3AF' },          // gray-400
+  { id: OpportunityStage.QUALIFIED, title: 'Qualificado', color: '#38BDF8' }, // sky-400
+  { id: OpportunityStage.VISIT_SCHEDULED, title: 'Visita Agendada', color: '#3B82F6' }, // blue-500
+  { id: OpportunityStage.PROPOSAL, title: 'Proposta', color: '#F59E0B' },    // amber-500
+  { id: OpportunityStage.NEGOTIATION, title: 'Negociação', color: '#8B5CF6' }, // purple-500
+  { id: OpportunityStage.CLOSED_WON, title: 'Ganho', color: '#10B981' },     // green-500 (must be green)
+  { id: OpportunityStage.CLOSED_LOST, title: 'Perdido', color: '#EF4444' },   // red-500 (must be red)
 ];
