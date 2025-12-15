@@ -10,10 +10,13 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
     "prisma:studio": "prisma studio",
-    "seed": "ts-node src/seed.ts"
+    "seed": "ts-node src/seed.ts",
+    "seed_users": "ts-node src/seed_users.ts",
+    "seed:users": "ts-node src/seed_users.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.0.0",
+    "axios": "^1.13.2",
     "bcrypt": "^5.1.0",
     "cors": "^2.8.5",
     "dotenv": "^16.0.0",

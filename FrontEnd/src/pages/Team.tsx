@@ -5,6 +5,7 @@ import { User, UserRole } from '../types/types';
 import { Mail, Phone, Plus, CheckCircle, XCircle, TrendingUp, DollarSign, Target, X, Edit2, Trash2, User as UserIcon, Shield, Briefcase, Search, LayoutGrid, List as ListIcon, AlertTriangle } from 'lucide-react';
 import { useLanguage } from '../config/i18n';
 import { Can, usePermission } from '../context/auth';
+import { useToast } from '../context/toastContext';
 
 // --- Delete Confirmation Modal ---
 interface DeleteConfirmationModalProps {
@@ -244,7 +245,8 @@ const TeamMemberFormModal: React.FC<TeamMemberFormModalProps> = ({ isOpen, onClo
 const Team = () => {
     const { t } = useLanguage();
     const { team, addTeamMember, updateTeamMember, deleteTeamMember } = useData();
-    const { user } = usePermission();
+    const { user, hasPermission } = usePermission();
+    const toast = useToast();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingMember, setEditingMember] = useState<User | null>(null);
@@ -283,23 +285,29 @@ const Team = () => {
     };
 
     const handleCreateOrUpdate = (data: Partial<User>) => {
-        if (editingMember) {
-            updateTeamMember({ ...editingMember, ...data } as User);
-        } else {
-            const newUser: User = {
-                id: `usr_${Date.now()}`,
-                name: data.name || 'Unknown',
-                email: data.email || '',
-                phone: data.phone,
-                role: data.role || UserRole.BROKER,
-                status: data.status || 'ACTIVE',
-                avatarUrl: `https://ui-avatars.com/api/?name=${data.name}&background=random`,
-                tenantId: user?.tenantId
-            };
-            addTeamMember(newUser);
+        try {
+            if (editingMember) {
+                updateTeamMember({ ...editingMember, ...data } as User);
+                toast.success(t('team.updated_success') || 'Membro atualizado com sucesso!');
+            } else {
+                const newUser: User = {
+                    id: `usr_${Date.now()}`,
+                    name: data.name || 'Unknown',
+                    email: data.email || '',
+                    phone: data.phone,
+                    role: data.role || UserRole.BROKER,
+                    status: data.status || 'ACTIVE',
+                    avatarUrl: `https://ui-avatars.com/api/?name=${data.name}&background=random`,
+                    tenantId: user?.tenantId
+                };
+                addTeamMember(newUser);
+                toast.success(t('team.created_success') || 'Membro adicionado com sucesso!');
+            }
+            setIsModalOpen(false);
+            setEditingMember(null);
+        } catch (error: any) {
+            toast.error(error.message || 'Erro ao salvar membro da equipe.');
         }
-        setIsModalOpen(false);
-        setEditingMember(null);
     };
 
     const handleEditClick = (member: User) => {
@@ -314,9 +322,14 @@ const Team = () => {
 
     const executeDelete = () => {
         if (memberToDelete) {
-            deleteTeamMember(memberToDelete.id);
-            setMemberToDelete(null);
-            setIsDeleteModalOpen(false);
+            try {
+                deleteTeamMember(memberToDelete.id);
+                toast.success(t('team.deleted_success') || 'Membro excluído com sucesso!');
+                setMemberToDelete(null);
+                setIsDeleteModalOpen(false);
+            } catch (error: any) {
+                toast.error(error.message || 'Erro ao excluir membro.');
+            }
         }
     };
 
@@ -382,9 +395,9 @@ const Team = () => {
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <Can permission="team.edit">
+                                                    {(isCurrentUser || hasPermission('team.edit')) && (
                                                         <button onClick={() => handleEditClick(member)} className="p-1.5 text-gray-400 hover:text-indigo-600 rounded-lg hover:bg-gray-50"><Edit2 className="w-4 h-4" /></button>
-                                                    </Can>
+                                                    )}
                                                     <Can permission="team.delete">
                                                         {!isCurrentUser && <button onClick={() => confirmDelete(member)} className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-gray-50"><Trash2 className="w-4 h-4" /></button>}
                                                     </Can>
@@ -455,9 +468,9 @@ const Team = () => {
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
                                                     <div className="flex justify-end items-center gap-1">
-                                                        <Can permission="team.edit">
+                                                        {(member.id === user?.id || hasPermission('team.edit')) && (
                                                             <button onClick={() => handleEditClick(member)} className="p-1.5 text-gray-400 hover:text-indigo-600 rounded-lg hover:bg-gray-100"><Edit2 className="w-4 h-4" /></button>
-                                                        </Can>
+                                                        )}
                                                         <Can permission="team.delete">
                                                             {member.id !== user?.id && <button onClick={() => confirmDelete(member)} className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-gray-100"><Trash2 className="w-4 h-4" /></button>}
                                                         </Can>

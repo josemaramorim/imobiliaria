@@ -1,6 +1,7 @@
 // Domain Types
 
 export enum UserRole {
+  SUPER_ADMIN = 'SUPER_ADMIN',
   ADMIN = 'ADMIN',
   MANAGER = 'MANAGER',
   BROKER = 'BROKER',
@@ -23,7 +24,7 @@ export type Permission =
 
 // --- Billing & SaaS Management ---
 
-export type PaymentGatewayId = 'stripe' | 'pagarme' | 'asaas' | 'pagseguro';
+export type PaymentGatewayId = string; // ID vem do banco de dados (stripe, pagarme, asaas, pagseguro, paypal, etc)
 
 export interface PaymentGateway {
   id: PaymentGatewayId;
@@ -120,6 +121,7 @@ export interface CustomFieldConfig {
   type: CustomFieldType;
   options?: string[]; // For SELECT and MULTI_SELECT
   required?: boolean;
+  entity?: 'PROPERTY' | 'LEAD';
 }
 
 export interface Property {

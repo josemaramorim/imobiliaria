@@ -14,9 +14,11 @@ export const tenantUpdateSchema = z.object({
   name: z.string().min(2).optional(),
   domain: z.string().min(2).optional(),
   themeColor: z.string().optional(),
-  logoUrl: z.string().optional(),
+  logoUrl: z.string().nullable().optional(),
   status: z.enum(['ACTIVE', 'INACTIVE', 'TRIAL', 'PAST_DUE']).optional(),
-  nextBillingDate: z.string().optional(),
+  planId: z.string().optional(),
+  paymentGatewayId: z.string().optional(),
+  nextBillingDate: z.string().nullable().optional(),
 });
 
 export const planSchema = z.object({
@@ -55,6 +57,7 @@ export const leadSchema = z.object({
 export const opportunitySchema = z.object({
   leadId: z.string().min(1),
   leadName: z.string().min(1),
+  title: z.string().optional(),
   propertyId: z.string().optional(),
   propertyTitle: z.string().optional(),
   value: z.number().nonnegative(),
@@ -109,4 +112,25 @@ export const webhookSchema = z.object({
   events: z.array(z.string()).min(1),
   status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
   tenantId: z.string().min(1).optional(),
+});
+
+export const globalSettingsSchema = z.object({
+  platformName: z.string().min(2),
+  defaultCurrency: z.string().min(1),
+  maintenanceMode: z.boolean(),
+  allowSignups: z.boolean(),
+});
+
+export const customFieldEntitySchema = z.enum(['PROPERTY', 'LEAD']);
+
+export const customFieldConfigSchema = z.object({
+  key: z.string().min(1),
+  label: z.string().min(1),
+  type: z.enum(['TEXT', 'NUMBER', 'SELECT', 'MULTI_SELECT', 'BOOLEAN']),
+  options: z.array(z.string()).optional(),
+  required: z.boolean().optional(),
+});
+
+export const customFieldBulkUpsertSchema = z.object({
+  fields: z.array(customFieldConfigSchema).max(50),
 });

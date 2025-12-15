@@ -15,14 +15,25 @@ router.get('/', requireAuth, identifyTenant, requireTenant, async (req: any, res
 });
 
 router.post('/', requireAuth, identifyTenant, requireTenant, async (req: any, res: any) => {
+  console.log('🏠 [CREATE PROPERTY] Recebido:', req.body);
+  console.log('🏠 [CREATE PROPERTY] TenantId:', res.locals.tenantId);
+  console.log('🏠 [CREATE PROPERTY] User:', req.user);
+  
   const parse = propertySchema.safeParse(req.body);
-  if (!parse.success) return res.status(400).json({ error: 'validation', details: parse.error.format() });
+  if (!parse.success) {
+    console.error('❌ [CREATE PROPERTY] Validação falhou:', parse.error.format());
+    return res.status(400).json({ error: 'validation', details: parse.error.format() });
+  }
+  
   const data = parse.data;
+  console.log('✅ [CREATE PROPERTY] Dados validados:', data);
+  
   try {
     const prop = await prisma.property.create({ data: { ...data, tenantId: res.locals.tenantId } });
+    console.log('✅ [CREATE PROPERTY] Criado com sucesso:', prop.id);
     return res.status(201).json({ property: prop });
   } catch (err: any) {
-    console.error('create property err', err);
+    console.error('❌ [CREATE PROPERTY] Erro ao criar:', err);
     return res.status(500).json({ error: 'server_error', message: err.message });
   }
 });

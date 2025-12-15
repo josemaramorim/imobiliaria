@@ -102,15 +102,29 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
   const [allInvoices, setAllInvoices] = useSessionStorage<Invoice[]>('apollo_invoices', MOCK_INVOICES);
   const [allTeam, setAllTeam] = useSessionStorage<User[]>('apollo_team', MOCK_TEAM);
 
-  const [activeTenantId, setActiveTenantId] = useSessionStorage<string>('apollo_current_tenant', MOCK_TENANTS[0].id);
+  // If a Super Admin is logged, avoid selecting a tenant by default (so admin pages show)
+  const defaultTenantId = (() => {
+    if (typeof window === 'undefined') return MOCK_TENANTS[0].id;
+    try {
+      const raw = window.sessionStorage.getItem('apollo_session_user');
+      if (raw) {
+        const u = JSON.parse(raw);
+        if (u && u.role === 'SUPER_ADMIN') return null;
+      }
+    } catch (e) { /* ignore */ }
+    return MOCK_TENANTS[0].id;
+  })();
+
+  const [activeTenantId, setActiveTenantId] = useSessionStorage<string | null>('apollo_current_tenant', defaultTenantId);
   const [globalSettings, setGlobalSettings] = useSessionStorage<GlobalSettings>('apollo_global_settings', {
       platformName: 'Apollo SaaS', defaultCurrency: 'BRL', maintenanceMode: false, allowSignups: true
   });
 
-  const currentTenant = tenants.find(t => t.id === activeTenantId) || tenants[0];
+  // If no activeTenantId (null) for super admin, currentTenant is null
+  const currentTenant = activeTenantId ? (tenants.find(t => t.id === activeTenantId) || tenants[0]) : null;
   const token = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
 
-  const createTenantScopedKey = (baseKey: string) => `apollo_${currentTenant.id}_${baseKey}_v3`;
+  const createTenantScopedKey = (baseKey: string) => `apollo_${(currentTenant ? currentTenant.id : 'global')}_${baseKey}_v3`;
 
   // Tenant-Scoped States
   const [visits, setVisits] = useSessionStorage<Visit[]>(createTenantScopedKey('visits'), []);
@@ -125,27 +139,72 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
 
   // Load tenant-scoped data from backend when we have a token and a tenant selected
   useEffect(() => {
-    if (!token) return; // not authenticated
+    let cancelled = false;
 
-    (async () => {
+    const loadTenantData = async () => {
+      // read fresh token from sessionStorage (do not rely on stale capture)
+      const tk = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
+      if (!tk) {
+        console.debug('📊 [DataContext] Pulando: sem token ou user');
+        return;
+      }
+      if (!currentTenant || !currentTenant.id) {
+        console.debug('📊 [DataContext] Super Admin sem tenant selecionado - pulando carregamento de dados tenant-scoped');
+        return;
+      }
       try {
         const { api } = await import('./services/api');
-        // list properties
         const props = await api.listProperties(currentTenant?.id);
+        if (cancelled) return;
         if (Array.isArray(props)) setProperties(props as any);
-        // list leads
         const lds = await api.listLeads(currentTenant?.id);
+        if (cancelled) return;
         if (Array.isArray(lds)) setLeads(lds as any);
       } catch (err) {
-        // keep local mocks if backend calls fail
         console.warn('Backend fetch failed, continuing with local state', err);
       }
-    })();
-  }, [token, activeTenantId]);
+    };
 
-  // Filtered data based on current tenant
-  const team = allTeam.filter(t => t.tenantId === currentTenant.id);
-  const invoices = allInvoices.filter(i => i.tenantId === currentTenant.id);
+    loadTenantData();
+
+    // also reload when auth events occur (login/logout)
+    const onLogin = (ev?: any) => {
+      // If login event provides role/tenant, adjust active tenant accordingly
+      try {
+        const detail = ev?.detail;
+        if (detail) {
+          if (detail.role === 'SUPER_ADMIN') {
+            setActiveTenantId(null as any);
+            sessionStorage.removeItem('apollo_current_tenant');
+          } else if (detail.tenantId) {
+            setActiveTenantId(detail.tenantId);
+            sessionStorage.setItem('apollo_current_tenant', JSON.stringify(detail.tenantId));
+          }
+        }
+      } catch (e) { /* ignore */ }
+      loadTenantData();
+    };
+
+    const onLogout = () => {
+      // clear tenant-scoped states on logout
+      setProperties([]);
+      setLeads([]);
+      setActiveTenantId(null as any);
+      try { sessionStorage.removeItem('apollo_current_tenant'); } catch (e) { /* ignore */ }
+    };
+    window.addEventListener('apollo:login', onLogin);
+    window.addEventListener('apollo:logout', onLogout);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('apollo:login', onLogin);
+      window.removeEventListener('apollo:logout', onLogout);
+    };
+  }, [activeTenantId]);
+
+    // Filtered data based on current tenant
+  const team = currentTenant ? allTeam.filter(t => t.tenantId === currentTenant.id) : [];
+  const invoices = currentTenant ? allInvoices.filter(i => i.tenantId === currentTenant.id) : [];
 
   // --- SaaS Management ---
   const switchTenant = (tenantId: string) => {

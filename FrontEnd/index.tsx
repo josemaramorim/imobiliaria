@@ -7,13 +7,24 @@ import App from './App';
 // with a fresh state. We remove any key that starts with `apollo_` in both
 // localStorage and sessionStorage to avoid stale sessions.
 if (typeof window !== 'undefined') {
+  const clearApolloKeys = () => {
+    try {
+      Object.keys(localStorage).forEach(k => { if (k.startsWith('apollo_')) localStorage.removeItem(k); });
+    } catch (e) { /* ignore */ }
+    try {
+      Object.keys(sessionStorage).forEach(k => { if (k.startsWith('apollo_')) sessionStorage.removeItem(k); });
+    } catch (e) { /* ignore */ }
+    // also ensure apollo_current_tenant is removed explicitly
+    try { sessionStorage.removeItem('apollo_current_tenant'); } catch (e) { /* ignore */ }
+    console.debug('[Init] Cleared old apollo_* keys and apollo_current_tenant from storages');
+  };
+
+  // Expose for runtime checks (tests or other modules can call `window.clearApolloKeys()`)
   try {
-    Object.keys(localStorage).forEach(k => { if (k.startsWith('apollo_')) localStorage.removeItem(k); });
+    (window as any).clearApolloKeys = clearApolloKeys;
   } catch (e) { /* ignore */ }
-  try {
-    Object.keys(sessionStorage).forEach(k => { if (k.startsWith('apollo_')) sessionStorage.removeItem(k); });
-  } catch (e) { /* ignore */ }
-  console.debug('[Init] Cleared old apollo_* keys from storages');
+
+  clearApolloKeys();
 }
 
 const rootElement = document.getElementById('root');

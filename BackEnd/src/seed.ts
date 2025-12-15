@@ -16,13 +16,16 @@ async function main() {
   ]).catch(() => { });
 
   console.log('✨ Criando configurações globais...');
-  await prisma.globalSettings.create({ data: { platformName: 'Apollo Real Estate Cloud', defaultCurrency: 'BRL', maintenanceMode: false, allowSignups: true } });
+  await prisma.globalSettings.create({ data: { platformName: 'ImobIA', defaultCurrency: 'BRL', maintenanceMode: false, allowSignups: true } });
 
   console.log('✨ Criando gateways de pagamento...');
   await prisma.paymentGateway.createMany({
     data: [
       { id: 'stripe', name: 'Stripe', logo: '', themeColor: '#6772E5', status: 'ACTIVE', configFields: JSON.stringify([{ key: 'apiKey', label: 'API Key' }]) },
-      { id: 'pagarme', name: 'Pagar.me', logo: '', themeColor: '#1E3A8A', status: 'INACTIVE', configFields: JSON.stringify([{ key: 'token', label: 'Token' }]) }
+      { id: 'pagarme', name: 'Pagar.me', logo: '', themeColor: '#1E3A8A', status: 'INACTIVE', configFields: JSON.stringify([{ key: 'token', label: 'Token' }]) },
+      { id: 'asaas', name: 'Asaas', logo: '', themeColor: '#6772E5', status: 'ACTIVE', configFields: JSON.stringify([{ key: 'apiKey', label: 'API Key' }]) },
+      { id: 'pagseguro', name: 'PagSeguro', logo: '', themeColor: '#A5A5A5', status: 'ACTIVE', configFields: JSON.stringify([{ key: 'token', label: 'Token' }]) },      
+      { id: 'paypal', name: 'PayPal', logo: '', themeColor: '#003087', status: 'ACTIVE', configFields: JSON.stringify([{ key: 'clientId', label: 'Client ID' }, { key: 'clientSecret', label: 'Client Secret' }]) },
     ]
   });
 
@@ -32,7 +35,7 @@ async function main() {
 
   console.log('🔐 Criando usuário super-admin...');
   const hash = await bcrypt.hash('admin', 10); // Senha 'admin' conforme FrontEnd
-  const admin = await prisma.user.create({ data: { name: 'Super Admin', email: 'admin@saas.com', passwordHash: hash, role: 'ADMIN', avatarUrl: 'https://ui-avatars.com/api/?name=SA&background=000&color=fff' } });
+  const admin = await prisma.user.create({ data: { name: 'Super Admin', email: 'admin@saas.com', passwordHash: hash, role: 'SUPER_ADMIN', avatarUrl: 'https://ui-avatars.com/api/?name=SA&background=000&color=fff' } });
 
   console.log('🏢 Criando um tenant de exemplo...');
   const tenant = await prisma.tenant.create({

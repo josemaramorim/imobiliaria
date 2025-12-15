@@ -12,14 +12,21 @@ if (!JWT_SECRET) {
 }
 
 export function requireAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  console.log('🔐 [AUTH] Requisição:', req.method, req.originalUrl || req.url);
   const authHeader = req.headers['authorization'] || '';
+  console.log('🔐 [AUTH] Authorization header:', authHeader ? 'presente' : 'ausente');
   const token = authHeader.replace(/^Bearer\s+/i, '') || null;
-  if (!token) return res.status(401).json({ error: 'token_missing' });
+  if (!token) {
+    console.log('❌ [AUTH] Token ausente!');
+    return res.status(401).json({ error: 'token_missing' });
+  }
   try {
     const payload = jwt.verify(token, JWT_SECRET as string) as any;
     req.user = { sub: payload.sub, role: payload.role };
+    console.log('✅ [AUTH] Token válido, user:', req.user.sub);
     return next();
   } catch (err) {
+    console.log('❌ [AUTH] Token inválido!', err);
     return res.status(401).json({ error: 'token_invalid' });
   }
 }
@@ -27,7 +34,10 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
 export function requireRole(role: string) {
   return function (req: AuthenticatedRequest, res: Response, next: NextFunction) {
     if (!req.user) return res.status(401).json({ error: 'unauthenticated' });
-    if (req.user.role !== role && req.user.role !== 'ADMIN') return res.status(403).json({ error: 'forbidden' });
-    return next();
+    const privilegedRoles = ['ADMIN', 'SUPER_ADMIN'];
+    if (req.user.role === role || privilegedRoles.includes(req.user.role || '')) {
+      return next();
+    }
+    return res.status(403).json({ error: 'forbidden' });
   };
 }
