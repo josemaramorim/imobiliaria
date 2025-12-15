@@ -113,12 +113,18 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
       setUser(resp.user);
 
       if (resp.user && (resp.user as any).tenantId) {
-        sessionStorage.setItem('apollo_current_tenant', (resp.user as any).tenantId);
+        sessionStorage.setItem('apollo_current_tenant', JSON.stringify((resp.user as any).tenantId));
+        try { window.dispatchEvent(new CustomEvent('apollo:login', { detail: { role: resp.user.role, tenantId: (resp.user as any).tenantId } })); } catch (e) {}
       } else if (resp.user && resp.user.role === UserRole.SUPER_ADMIN) {
         // Super Admin não tem tenant; remover qualquer tenant atual e redirecionar
         sessionStorage.removeItem('apollo_current_tenant');
-        // Use setTimeout 0 para garantir que o React aplique o setUser antes do hash change
-        setTimeout(() => { window.location.hash = '#/admin/tenants'; }, 0);
+        try { window.dispatchEvent(new CustomEvent('apollo:login', { detail: { role: resp.user.role, tenantId: null } })); } catch (e) {}
+        // short delay so listeners react
+        setTimeout(() => { window.location.hash = '#/admin/tenants'; }, 120);
+      }
+      // if non-super-admin with tenant, ensure navigation to app root after short delay
+      if (resp.user && (resp.user as any).tenantId && resp.user.role !== UserRole.SUPER_ADMIN) {
+        setTimeout(() => { window.location.hash = '#/'; }, 120);
       }
     } catch (err) {
       console.error('🔐 [AuthProvider] Erro no login:', err);
@@ -132,6 +138,9 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
     setUser(null);
     sessionStorage.removeItem('apollo_session_user');
     sessionStorage.removeItem('apollo_token');
+    // Ensure tenant selection is cleared on logout to avoid stale tenant UI
+    sessionStorage.removeItem('apollo_current_tenant');
+    try { window.dispatchEvent(new Event('apollo:logout')); } catch (e) {}
     window.location.hash = '/login';
   };
 

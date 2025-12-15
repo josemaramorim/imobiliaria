@@ -31,6 +31,7 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
     if (!token) {
       // no token => ensure any stale session data is cleared
       sessionStorage.removeItem('apollo_session_user');
+      sessionStorage.removeItem('apollo_current_tenant');
       setUser(null);
       setIsLoading(false);
       return;
@@ -65,7 +66,45 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
       if (resp.user && (resp.user as any).tenantId) {
         sessionStorage.setItem('apollo_current_tenant', JSON.stringify((resp.user as any).tenantId));
       }
+        // If the logged user has no tenant (eg. super admin), ensure any previous
+        // selected tenant is cleared to avoid being redirected to a tenant view.
+        if (!resp.user || !(resp.user as any).tenantId) {
+          sessionStorage.removeItem('apollo_current_tenant');
+        }
       setUser(resp.user);
+      try {
+        // notify other parts of the app that login completed
+        const detail = { role: resp.user?.role || null, tenantId: (resp.user as any)?.tenantId || null };
+        // if super admin, ensure no tenant is selected
+        if (detail.role === 'SUPER_ADMIN') {
+          sessionStorage.removeItem('apollo_current_tenant');
+        }
+        const ev = new CustomEvent('apollo:login', { detail });
+        window.dispatchEvent(ev);
+      } catch (e) { /* ignore */ }
+      // After login, navigate to the appropriate area. Use a short delay
+      // to allow other listeners (DataProvider) to process the login event.
+      try {
+        const role = resp.user?.role;
+        const tenantId = (resp.user as any)?.tenantId || null;
+        // ensure sessionStorage reflects final state before navigation
+        if (role === 'SUPER_ADMIN') {
+          try { sessionStorage.removeItem('apollo_current_tenant'); } catch (e) {}
+        } else if (tenantId) {
+          try { sessionStorage.setItem('apollo_current_tenant', JSON.stringify(tenantId)); } catch (e) {}
+        }
+        setTimeout(() => {
+          try {
+            if (role === 'SUPER_ADMIN') {
+              window.location.href = window.location.href.split('#')[0] + '#/admin/tenants';
+            } else if (tenantId) {
+              window.location.href = window.location.href.split('#')[0] + '#/';
+            } else {
+              window.location.href = window.location.href.split('#')[0] + '#/';
+            }
+          } catch (e) { /* ignore navigation errors */ }
+        }, 120);
+      } catch (e) { /* ignore */ }
     } catch (err) {
       throw err;
     } finally {
@@ -77,6 +116,18 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
     setUser(null);
     sessionStorage.removeItem('apollo_session_user');
     sessionStorage.removeItem('apollo_token');
+    sessionStorage.removeItem('apollo_current_tenant');
+    // additional check / cleanup after logout to avoid stale tenant selection
+    try {
+      // call global cleaner if available
+      const win: any = window as any;
+      if (win.clearApolloKeys && typeof win.clearApolloKeys === 'function') win.clearApolloKeys();
+      // verify the key is not present
+      const tenant = sessionStorage.getItem('apollo_current_tenant');
+      const anyApollo = Object.keys(sessionStorage).some(k => k.startsWith('apollo_')) || Object.keys(localStorage).some(k => k.startsWith('apollo_'));
+      console.debug('[Auth] post-logout check - apollo_current_tenant:', tenant, 'anyApolloKeysLeft:', anyApollo);
+    } catch (e) { /* ignore */ }
+    try { window.dispatchEvent(new Event('apollo:logout')); } catch (e) { /* ignore */ }
     window.location.hash = '/login';
   };
 
