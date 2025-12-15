@@ -108,7 +108,7 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
   const [allInvoices, setAllInvoices] = useSessionStorage<Invoice[]>('apollo_invoices', []);
   const [allTeam, setAllTeam] = useSessionStorage<User[]>('apollo_team', []);
 
-  const [activeTenantId, setActiveTenantId] = useSessionStorage<string>('apollo_current_tenant', '');
+  const [activeTenantId, setActiveTenantId] = useSessionStorage<string | null>('apollo_current_tenant', null);
   const [globalSettings, setGlobalSettings] = useSessionStorage<GlobalSettings>('apollo_global_settings', {
     platformName: '', defaultCurrency: '', maintenanceMode: false, allowSignups: true
   });
@@ -129,6 +129,34 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
       setActiveTenantId(user.tenantId);
     }
   }, [user, activeTenantId, setActiveTenantId]);
+
+  // React to auth events so tenant selection is always in sync
+  useEffect(() => {
+    const onLogin = (ev: any) => {
+      try {
+        const detail = ev?.detail;
+        if (detail) {
+          if (detail.role === 'SUPER_ADMIN') {
+            setActiveTenantId(null);
+            try { sessionStorage.removeItem('apollo_current_tenant'); } catch (e) {}
+          } else if (detail.tenantId) {
+            setActiveTenantId(detail.tenantId);
+            try { sessionStorage.setItem('apollo_current_tenant', JSON.stringify(detail.tenantId)); } catch (e) {}
+          }
+        }
+      } catch (e) { /* ignore */ }
+    };
+    const onLogout = () => {
+      setActiveTenantId(null);
+      try { sessionStorage.removeItem('apollo_current_tenant'); } catch (e) {}
+    };
+    window.addEventListener('apollo:login', onLogin);
+    window.addEventListener('apollo:logout', onLogout);
+    return () => {
+      window.removeEventListener('apollo:login', onLogin);
+      window.removeEventListener('apollo:logout', onLogout);
+    };
+  }, [setActiveTenantId]);
 
   const currentTenant = tenants.find(t => t.id === activeTenantId);
   const token = typeof window !== 'undefined' ? sessionStorage.getItem('apollo_token') : null;
@@ -155,9 +183,9 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
       console.log('📊 [DataContext] Pulando: sem token ou user');
       return; // not authenticated
     }
-    
-    // Super Admin (user without tenantId) should not load tenant-scoped data
-    if (!user.tenantId && !activeTenantId) {
+
+    const effectiveTenant = activeTenantId || (user && user.tenantId) || null;
+    if (!effectiveTenant) {
       console.log('📊 [DataContext] Super Admin sem tenant selecionado - pulando carregamento de dados tenant-scoped');
       return;
     }
@@ -170,14 +198,14 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
     (async () => {
       try {
         const { api } = await import('../services/api');
-        
+
         console.log('📊 [DataContext] Carregando properties...');
-        const props = await api.listProperties();
+        const props = await api.listProperties(effectiveTenant);
         console.log('📊 [DataContext] Properties recebidas:', props);
         if (Array.isArray(props)) setProperties(props as any);
-        
+
         console.log('📊 [DataContext] Carregando leads...');
-        const lds = await api.listLeads();
+        const lds = await api.listLeads(effectiveTenant);
         console.log('📊 [DataContext] Leads recebidos:', lds);
         if (Array.isArray(lds)) setLeads(lds as any);
         
@@ -994,7 +1022,8 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
       tags, addTag, updateTag, deleteTag,
       properties, addProperty, updateProperty, deleteProperty,
       opportunities, addOpportunity, updateOpportunity, deleteOpportunity,
-      team, addTeamMember, updateTeamMember, deleteTeamMember,
+      // expose both `team` (filtered by current tenant) and `allTeam` (raw cached users)
+      allTeam, team, addTeamMember, updateTeamMember, deleteTeamMember,
       propertyCustomFields, updatePropertyCustomFields,
       leadCustomFields, updateLeadCustomFields,
       apiKeys, addApiKey, revokeApiKey, toggleApiKeyStatus,

@@ -8,7 +8,16 @@ const getToken = () => {
   else console.log('📡 [API] ⚠️ Token NÃO encontrado!');
   return token;
 };
-const getTenant = () => typeof window !== 'undefined' ? sessionStorage.getItem('apollo_current_tenant') : null;
+const getTenant = () => {
+  if (typeof window === 'undefined') return null;
+  const raw = sessionStorage.getItem('apollo_current_tenant');
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    return raw;
+  }
+};
 
 const client = axios.create({ baseURL: BASE, headers: { 'Content-Type': 'application/json' } });
 

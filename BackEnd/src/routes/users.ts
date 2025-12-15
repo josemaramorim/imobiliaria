@@ -23,9 +23,24 @@ router.get('/', requireAuth, async (req: any, res) => {
       return res.status(404).json({ error: 'user_not_found' });
     }
 
-    // List all users in the same tenant
+    // If the current user is SUPER_ADMIN, allow listing all users (platform + tenants)
+    // Optionally support a `tenant` query parameter to restrict results.
+    const tenantFilter = req.query?.tenant as string | undefined;
+    let whereClause: any = {};
+
+    if (currentUser.role !== 'SUPER_ADMIN') {
+      // Regular tenant admin: only list users from the same tenant
+      whereClause.tenantId = currentUser.tenantId;
+    } else if (tenantFilter) {
+      // Super admin requested a specific tenant
+      whereClause.tenantId = tenantFilter;
+    } else {
+      // Super admin without tenant filter: no tenant restriction (list all users)
+      whereClause = {};
+    }
+
     const users = await prisma.user.findMany({
-      where: { tenantId: currentUser.tenantId },
+      where: whereClause,
       select: {
         id: true,
         name: true,
@@ -63,7 +78,7 @@ router.post('/', requireAuth, async (req: any, res) => {
       return res.status(403).json({ error: 'forbidden' });
     }
 
-    const { name, email, phone, role, status } = req.body;
+    const { name, email, phone, role, status, tenantId: tenantFromBody } = req.body;
 
     // Validate required fields
     if (!name || !email) {
@@ -80,6 +95,22 @@ router.post('/', requireAuth, async (req: any, res) => {
     const defaultPassword = '123456';
     const passwordHash = await bcrypt.hash(defaultPassword, 10);
 
+    // Determine tenant for the new user
+    let tenantToAssign: string | null = null;
+    if (currentUser.role === 'SUPER_ADMIN') {
+      // Super admin must provide a tenantId when creating tenant-scoped users
+      if (!tenantFromBody) {
+        return res.status(400).json({ error: 'tenant_missing' });
+      }
+      tenantToAssign = tenantFromBody;
+    } else {
+      // Regular admins must belong to a tenant and new users inherit that tenant
+      if (!currentUser.tenantId) {
+        return res.status(400).json({ error: 'creator_without_tenant' });
+      }
+      tenantToAssign = currentUser.tenantId;
+    }
+
     // Create user
     const newUser = await prisma.user.create({
       data: {
@@ -89,7 +120,7 @@ router.post('/', requireAuth, async (req: any, res) => {
         role: role || 'BROKER',
         status: status || 'ACTIVE',
         passwordHash,
-        tenantId: currentUser.tenantId,
+        tenantId: tenantToAssign,
         avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`
       },
       select: {
