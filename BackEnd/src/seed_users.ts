@@ -19,14 +19,14 @@ async function main() {
     update: {
       name: 'Super Admin',
       passwordHash: adminHash,
-      role: 'ADMIN',
+      role: 'SUPER_ADMIN',
       avatarUrl: 'https://ui-avatars.com/api/?name=SA&background=000&color=fff'
     },
     create: {
       name: 'Super Admin',
       email: 'admin@saas.com',
       passwordHash: adminHash,
-      role: 'ADMIN',
+      role: 'SUPER_ADMIN',
       avatarUrl: 'https://ui-avatars.com/api/?name=SA&background=000&color=fff'
     }
   });

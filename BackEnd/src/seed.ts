@@ -35,7 +35,7 @@ async function main() {
 
   console.log('🔐 Criando usuário super-admin...');
   const hash = await bcrypt.hash('admin', 10); // Senha 'admin' conforme FrontEnd
-  const admin = await prisma.user.create({ data: { name: 'Super Admin', email: 'admin@saas.com', passwordHash: hash, role: 'ADMIN', avatarUrl: 'https://ui-avatars.com/api/?name=SA&background=000&color=fff' } });
+  const admin = await prisma.user.create({ data: { name: 'Super Admin', email: 'admin@saas.com', passwordHash: hash, role: 'SUPER_ADMIN', avatarUrl: 'https://ui-avatars.com/api/?name=SA&background=000&color=fff' } });
 
   console.log('🏢 Criando um tenant de exemplo...');
   const tenant = await prisma.tenant.create({
