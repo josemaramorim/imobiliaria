@@ -218,25 +218,28 @@ export const DataProvider = ({ children }: { children?: ReactNode }) => {
 
   useEffect(() => {
     if (!token || !user) return;
-    
-    // Super Admin sem tenant não deve carregar dados tenant-scoped
-    if (!user.tenantId && !currentTenant) return;
 
     (async () => {
       try {
         const { api } = await import('../services/api');
         const users = await api.listUsers();
         if (Array.isArray(users)) {
-          setAllTeam(prev => {
-            const others = prev.filter(u => u.tenantId !== currentTenant.id);
-            return [...others, ...users];
-          });
+          // If we have a currentTenant, merge remote users replacing that tenant's users in cache
+          if (currentTenant) {
+            setAllTeam(prev => {
+              const others = prev.filter(u => u.tenantId !== currentTenant.id);
+              return [...others, ...users];
+            });
+          } else {
+            // No tenant selected (likely Super Admin view) — replace full team list
+            setAllTeam(users as any);
+          }
         }
       } catch (err) {
         console.warn('Failed to fetch team data, using local state', err);
       }
     })();
-  }, [token, currentTenant?.id]);
+  }, [token, currentTenant?.id, user?.tenantId]);
 
   // Load global SaaS data (tenants, plans) when authenticated
   useEffect(() => {
